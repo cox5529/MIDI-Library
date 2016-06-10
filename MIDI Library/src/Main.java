@@ -26,7 +26,7 @@ public class Main {
 		t.changeInstrument(256, 0, (byte) 74);
 		t.addNote(256, 256, 0, (byte) 0x3C, (byte) 127);
 		try {
-			file.write(new File("test.mid"));
+			file.write(new File("test.mid"), true);
 		} catch(IOException e) {
 			e.printStackTrace();
 		}

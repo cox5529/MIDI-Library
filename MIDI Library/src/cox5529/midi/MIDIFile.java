@@ -49,20 +49,31 @@ public class MIDIFile {
 	/**
 	 * Converts this MIDIFile to a .mid file
 	 * 
+	 * @param debug true if status should be printed to the console.
 	 * @param f the file to write the MIDITrack object to. Should end with ".mid".
 	 * @throws IOException if the file is not found or there is an error
 	 */
-	public void write(File f) throws IOException {
+	public void write(File f, boolean debug) throws IOException {
 		FileOutputStream fos = new FileOutputStream(f);
 		fos.write(new byte[] { 0x4D, 0x54, 0x68, 0x64 }); // Literal "MThd"
 		fos.write(new byte[] { 0x00, 0x00, 0x00, 0x06 });
 		fos.write(new byte[] { 0x00, 0x01 });
-		fos.write(ByteBuffer.allocate(4).putInt(tracks.size()).array(), 2, 2);
+		fos.write(ByteBuffer.allocate(4).putInt(tracks.size() + 1).array(), 2, 2);
 		fos.write(ByteBuffer.allocate(4).putInt(resolution).array(), 2, 2);
-		//fos.write(meta.toOutputArray());
+		if(debug) {
+			System.out.println("Wrote MIDI header.");
+		}
+		fos.write(meta.toOutputArray(debug));
+		fos.write(new byte[] { (byte) 0x00, (byte) 0xFF, 0x2F, 0x00 });
+		if(debug) {
+			System.out.println("Wrote Meta track.");
+		}
 		for(int i = 0; i < tracks.size(); i++) {
-			fos.write(tracks.get(i).toOutputArray());
-			fos.write(new byte[] { (byte) i, (byte) 0xFF, 0x2F, 0x00 });
+			fos.write(tracks.get(i).toOutputArray(debug));
+			fos.write(new byte[] { (byte) 0x00, (byte) 0xFF, 0x2F, 0x00 });
+			if(debug) {
+				System.out.println("Wrote track " + (1 + i) + ".");
+			}
 		}
 		fos.close();
 	}

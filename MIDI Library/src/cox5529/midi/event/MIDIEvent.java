@@ -12,38 +12,19 @@ public class MIDIEvent {
 	
 	private long timeStamp;
 	private byte status;
-	private byte data1;
-	private byte data2;
-	private int dataBytes;
+	private byte[] data;
 	
 	/**
 	 * Constructs a new MIDIEvent object
 	 * 
 	 * @param timeStamp the time at which the event occurs
 	 * @param status the status byte
-	 * @param data1 the data1 byte
+	 * @param data the data bytes
 	 */
-	public MIDIEvent(long timeStamp, byte status, byte data1) {
+	public MIDIEvent(long timeStamp, byte status, byte[] data) {
 		this.timeStamp = timeStamp;
 		this.status = status;
-		this.data1 = data1;
-		dataBytes = 1;
-	}
-	
-	/**
-	 * Constructs a new MIDIEvent object
-	 * 
-	 * @param timeStamp the time at which the event occurs
-	 * @param status the status byte
-	 * @param data1 the data1 byte
-	 * @param data2 the data2 byte
-	 */
-	public MIDIEvent(long timeStamp, byte status, byte data1, byte data2) {
-		this.timeStamp = timeStamp;
-		this.status = status;
-		this.data1 = data1;
-		this.data2 = data2;
-		dataBytes = 2;
+		this.data = data;
 	}
 	
 	/**
@@ -59,12 +40,9 @@ public class MIDIEvent {
 			b[i] = stamp[i];
 		}
 		b[stamp.length] = status;
-		if(dataBytes > 0)
-			b[stamp.length + 1] = data1;
-		if(dataBytes > 1)
-			b[stamp.length + 2] = data2;
-		for(int i = 0; i < b.length; i++)
-			System.out.printf("%d: %02X\n", prevTime, b[i]);
+		for(int i = 0; i < data.length; i++) {
+			b[stamp.length + 1 + i] = data[i];
+		}
 		return b;
 	}
 	
@@ -76,7 +54,7 @@ public class MIDIEvent {
 	 */
 	public int getSize(long prevTime) {
 		byte[] stamp = MusicTrack.decimalToMIDITime(timeStamp - prevTime);
-		return stamp.length + 1 + dataBytes;
+		return stamp.length + 1 + data.length;
 	}
 	
 	/**
@@ -116,39 +94,37 @@ public class MIDIEvent {
 	}
 	
 	/**
-	 * Gets the first data byte of this MIDIEvent
+	 * Gets the data bytes of this MIDIEvent
 	 * 
-	 * @return the first data byte of this MIDIEvent
+	 * @return the data bytes of this MIDIEvent
 	 */
-	public byte getData1() {
-		return data1;
+	public byte[] getData() {
+		return data;
 	}
 	
 	/**
-	 * Sets the first data byte of this MIDIEvent
+	 * Sets the data bytes of this MIDIEvent
 	 * 
-	 * @param data1 what the first data byte is being changed to
+	 * @param data what the data bytes are being changed to
 	 */
-	public void setData1(byte data1) {
-		this.data1 = data1;
+	public void setData2(byte[] data) {
+		this.data = data;
 	}
 	
 	/**
-	 * Gets the second data byte of this MIDIEvent
+	 * Gets the String representation of this MIDIEvent.
 	 * 
-	 * @return the second data byte of this MIDIEvent
+	 * @param prevTime the time of the previous MIDIEvent in this track.
+	 * @return the String representation of this MIDIEvent
 	 */
-	public byte getData2() {
-		return data2;
-	}
-	
-	/**
-	 * Sets the second data byte of this MIDIEvent
-	 * 
-	 * @param data2 what the second data byte is being changed to
-	 */
-	public void setData2(byte data2) {
-		this.data2 = data2;
+	public String toString(long prevTime) {
+		byte[] bytes = toByteArray(prevTime);
+		String re = "";
+		for(int i = 0; i < bytes.length; i++) {
+			re += String.format("%02X", bytes[i]) + (i == bytes.length - 1 ? "": " ");
+		}
+		return re;
+		
 	}
 	
 }
