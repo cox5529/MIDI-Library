@@ -8,7 +8,7 @@ import cox5529.midi.Helper;
  * @author Brandon Cox
  * 		
  */
-public class MIDIEvent {
+public class MIDIEvent implements Comparable<MIDIEvent> {
 	
 	private long timeStamp;
 	private byte status;
@@ -125,6 +125,22 @@ public class MIDIEvent {
 		}
 		return re;
 		
+	}
+	
+	/**
+	 * Compares this object with the specified object for order. Returns a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object.
+	 * 
+	 * @param event the MIDIEvent to compare this one to
+	 * @return a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object.
+	 */
+	@Override public int compareTo(MIDIEvent event) {
+		long ts = event.getTimeStamp();
+		if(ts > timeStamp)
+			return -1;
+		else if(ts == timeStamp)
+			return 0;
+		else
+			return 1;
 	}
 	
 }

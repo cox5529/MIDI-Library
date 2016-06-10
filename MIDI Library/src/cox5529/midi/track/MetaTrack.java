@@ -2,6 +2,7 @@ package cox5529.midi.track;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import cox5529.midi.event.MetaEvent;
 
@@ -30,6 +31,7 @@ public class MetaTrack {
 	 * @return the byte[] representation of this MIDITrack
 	 */
 	public byte[] toOutputArray(boolean debug) {
+		Collections.sort(events);
 		ArrayList<byte[]> out = new ArrayList<byte[]>();
 		out.add(new byte[] { 0x4D, 0x54, 0x72, 0x6B });
 		int trackLength = 4;
