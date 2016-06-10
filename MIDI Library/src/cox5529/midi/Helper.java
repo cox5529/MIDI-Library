@@ -50,4 +50,56 @@ public class Helper {
 		return b;
 	}
 	
+	/**
+	 * Converts a note in String form to its MIDI byte value.
+	 * 
+	 * @param note the note in string format. For example, "3C" or "3c" represents C in the 3rd octave. Ranges from -1C to 9G. Place # for sharps and b for flats after the pitch.
+	 * @return the note's byte value
+	 * @throws Exception if the note is out of range
+	 */
+	public static byte stringNoteToByteValue(String note) throws Exception {
+		int octave = (note.startsWith("-1") ? 0: Integer.parseInt(note.substring(0, 1)) + 1);
+		if(octave == 0)
+			note = note.substring(1);
+		if(octave < -1 || octave > 10)
+			throw new Exception("Octave " + octave + " out of range.");
+		String pitch = note.toLowerCase().substring(1);
+		byte p = (byte) (octave * 12);
+		switch(pitch) {
+			case "cb":
+			case "b":
+				p += 1;
+			case "bb":
+			case "a#":
+				p += 1;
+			case "a":
+				p += 1;
+			case "ab":
+			case "g#":
+				p += 1;
+			case "g":
+				p += 1;
+			case "gb":
+			case "f#":
+				p += 1;
+			case "f":
+				p += 1;
+			case "fb":
+			case "e":
+				p += 1;
+			case "eb":
+			case "d#":
+				p += 1;
+			case "d":
+				p += 1;
+			case "db":
+			case "c#":
+				p += 1;
+				break;
+		}
+		if(p >= 0)
+			return p;
+		else
+			throw new Exception("Note " + note + " is out of range. Must be within -1C and 9G.");
+	}
 }
