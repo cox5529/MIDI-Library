@@ -6,7 +6,7 @@ package cox5529.midi;
  * @author Brandon Cox
  * 		
  */
-@SuppressWarnings("javadoc") public class Constants {
+public class Constants {
 	
 	
 }
