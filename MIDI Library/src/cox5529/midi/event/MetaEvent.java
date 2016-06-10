@@ -1,6 +1,6 @@
 package cox5529.midi.event;
 
-import cox5529.midi.track.MusicTrack;
+import cox5529.midi.Helper;
 
 /**
  * Class used to store Meta MIDI Events (0xFF)
@@ -23,7 +23,7 @@ public class MetaEvent extends MIDIEvent {
 	 * @return a new MetaEvent object
 	 */
 	public static MetaEvent construct(long timestamp, byte type, byte[] data) {
-		byte[] var = MusicTrack.decimalToMIDITime(data.length);
+		byte[] var = Helper.decimalToMIDITime(data.length);
 		byte[] b = new byte[var.length + 1 + data.length];
 		b[0] = type;
 		for(int i = 0; i < var.length; i++) {

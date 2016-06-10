@@ -1,6 +1,6 @@
 package cox5529.midi.event;
 
-import cox5529.midi.track.MusicTrack;
+import cox5529.midi.Helper;
 
 /**
  * Class used to store a MIDI event.
@@ -34,7 +34,7 @@ public class MIDIEvent {
 	 * @return the byte[] representation of the MIDIEvent
 	 */
 	public byte[] toByteArray(long prevTime) {
-		byte[] stamp = MusicTrack.decimalToMIDITime(timeStamp - prevTime);
+		byte[] stamp = Helper.decimalToMIDITime(timeStamp - prevTime);
 		byte[] b = new byte[getSize(prevTime)];
 		for(int i = 0; i < stamp.length; i++) {
 			b[i] = stamp[i];
@@ -53,7 +53,7 @@ public class MIDIEvent {
 	 * @return the size of this MIDIEvent in bytes
 	 */
 	public int getSize(long prevTime) {
-		byte[] stamp = MusicTrack.decimalToMIDITime(timeStamp - prevTime);
+		byte[] stamp = Helper.decimalToMIDITime(timeStamp - prevTime);
 		return stamp.length + 1 + data.length;
 	}
 	
