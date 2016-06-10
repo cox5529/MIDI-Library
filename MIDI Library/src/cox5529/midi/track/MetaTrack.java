@@ -41,7 +41,7 @@ public class MetaTrack {
 			System.out.println("Created track header.");
 		for(int i = 0; i < events.size(); i++) {
 			if(debug)
-				System.out.println("Created meta event with data: " + events.get(i) + ".");
+				System.out.println("Created meta event with data: " + events.get(i).toString((i == 0 ? 0: events.get(i - 1).getTimeStamp())) + ".");
 			out.add(events.get(i).toByteArray((i == 0 ? 0: events.get(i - 1).getTimeStamp())));
 		}
 		int len = 0;
