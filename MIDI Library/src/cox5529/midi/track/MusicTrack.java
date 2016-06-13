@@ -2,9 +2,12 @@ package cox5529.midi.track;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
+import cox5529.midi.Helper;
 import cox5529.midi.event.MIDIEvent;
+import cox5529.midi.event.MetaEvent;
 
 /**
  * Class used to store music tracks within a MIDI file.
@@ -21,6 +24,15 @@ public class MusicTrack {
 	 */
 	public MusicTrack() {
 		events = new ArrayList<MIDIEvent>();
+	}
+	
+	/**
+	 * Constructs a new MusicTrack
+	 * 
+	 * @param events the ArrayList of events that this MusicTrack will use
+	 */
+	public MusicTrack(ArrayList<MIDIEvent> events) {
+		this.events = events;
 	}
 	
 	/**
@@ -56,9 +68,10 @@ public class MusicTrack {
 	 */
 	public byte[] toOutputArray(boolean debug) {
 		Collections.sort(events);
+		events.add(MetaEvent.construct(events.get(events.size() - 1).getTimeStamp(), (byte) 0x2F, new byte[] {}));
 		ArrayList<byte[]> out = new ArrayList<byte[]>();
 		out.add(new byte[] { 0x4D, 0x54, 0x72, 0x6B });
-		int trackLength = 4;
+		int trackLength = 0;
 		for(int i = 0; i < events.size(); i++) {
 			trackLength += events.get(i).getSize((i == 0 ? 0: events.get(i - 1).getTimeStamp()));
 		}
@@ -84,5 +97,39 @@ public class MusicTrack {
 			}
 		}
 		return re;
+	}
+	
+	/**
+	 * Converts an array of bytes to a MIDI track.
+	 * 
+	 * @param in the array of bytes to use
+	 * @param debug true if status should be printed to the console.
+	 * @return a new MusicTrack
+	 */
+	public static MusicTrack byteArrayToTrack(byte[] in, boolean debug) {
+		int length = Helper.byteArrayToInt(in[4], in[5], in[6], in[7]);
+		ArrayList<MIDIEvent> events = new ArrayList<MIDIEvent>();
+		for(int i = 8; i < length + 8; i += 0) {
+			int timeLength = 1;
+			for(int j = i; j < i + 4; j++) {
+				if(Byte.toUnsignedInt(in[j]) >= 128)
+					timeLength++;
+				else
+					break;
+			}
+			byte[] time = new byte[timeLength];
+			for(int j = i; j < i + timeLength; j++) {
+				time[j - i] = in[j];
+			}
+			long dtime = Helper.midiTimeToDecimal(time);
+			MIDIEvent event = MIDIEvent.readFromByteArray(Arrays.copyOfRange(in, i + timeLength, in.length), dtime, (events.size() == 0 ? 0: events.get(events.size() - 1).getTimeStamp()));
+			if(!event.toString((events.size() == 0 ? 0: events.get(events.size() - 1).getTimeStamp())).equals("00 FF 2F 00"))
+				events.add(event);
+			if(debug) {
+				System.out.println("Read MIDI event with data: " + events.get(events.size() - 1).toString((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp())) + ".");
+			}
+			i += events.get(events.size() - 1).getSize((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp()));
+		}
+		return new MusicTrack(events);
 	}
 }

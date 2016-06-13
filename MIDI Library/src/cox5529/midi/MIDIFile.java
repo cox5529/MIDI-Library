@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import cox5529.midi.track.MetaTrack;
 import cox5529.midi.track.MusicTrack;
@@ -28,6 +31,11 @@ public class MIDIFile {
 		meta = new MetaTrack();
 		tracks = new ArrayList<MusicTrack>();
 		resolution = 128;
+	}
+	
+	private MIDIFile(ArrayList<MusicTrack> tracks, int resolution) {
+		this.tracks = tracks;
+		this.resolution = resolution;
 	}
 	
 	/**
@@ -67,23 +75,52 @@ public class MIDIFile {
 		fos.write(new byte[] { 0x4D, 0x54, 0x68, 0x64 }); // Literal "MThd"
 		fos.write(new byte[] { 0x00, 0x00, 0x00, 0x06 });
 		fos.write(new byte[] { 0x00, 0x01 });
-		fos.write(ByteBuffer.allocate(4).putInt(tracks.size() + 1).array(), 2, 2);
+		fos.write(ByteBuffer.allocate(4).putInt(tracks.size() + (meta == null ? 0: 1)).array(), 2, 2);
 		fos.write(ByteBuffer.allocate(4).putInt(resolution).array(), 2, 2);
 		if(debug) {
 			System.out.println("Wrote MIDI header.");
 		}
-		fos.write(meta.toOutputArray(debug));
-		fos.write(new byte[] { (byte) 0x00, (byte) 0xFF, 0x2F, 0x00 });
-		if(debug) {
-			System.out.println("Wrote Meta track.");
+		if(meta != null) {
+			fos.write(meta.toOutputArray(debug));
+			if(debug) {
+				System.out.println("Wrote Meta track.");
+			}
 		}
 		for(int i = 0; i < tracks.size(); i++) {
 			fos.write(tracks.get(i).toOutputArray(debug));
-			fos.write(new byte[] { (byte) 0x00, (byte) 0xFF, 0x2F, 0x00 });
 			if(debug) {
 				System.out.println("Wrote track " + (1 + i) + ".");
 			}
 		}
 		fos.close();
+	}
+	
+	/**
+	 * Reads a MIDIFile.
+	 * 
+	 * @param f the file to read from in the .mid format
+	 * @param debug true if status should be printed to the console.
+	 * @return a MIDIFile object created from the given .mid file
+	 * @throws IOException if an I/O error occurs reading from the file
+	 */
+	public static MIDIFile read(File f, boolean debug) throws IOException {
+		byte[] file = Files.readAllBytes(Paths.get(f.getAbsolutePath()));
+		if(debug)
+			System.out.println("Read file into byte array.");
+		int trackCount = file[10] * 128 + file[11];
+		int resolution = Byte.toUnsignedInt(file[12]) * 128 + Byte.toUnsignedInt(file[13]);
+		int index = 14;
+		if(debug)
+			System.out.println("Read MIDI header.");
+		ArrayList<MusicTrack> tracks = new ArrayList<MusicTrack>();
+		for(int i = 0; i < trackCount; i++) {
+			int length = Helper.byteArrayToInt(file[index + 4], file[index + 5], file[index + 6], file[index + 7]);
+			tracks.add(MusicTrack.byteArrayToTrack(Arrays.copyOfRange(file, index, index + length + 8), debug));
+			if(debug)
+				System.out.println("Read track.");
+			index += length + 8;
+		}
+		MIDIFile out = new MIDIFile(tracks, resolution);
+		return out;
 	}
 }

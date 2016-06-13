@@ -1,5 +1,7 @@
 package cox5529.midi.event;
 
+import java.util.Arrays;
+
 import cox5529.midi.Helper;
 
 /**
@@ -10,7 +12,13 @@ import cox5529.midi.Helper;
  */
 public class MetaEvent extends MIDIEvent {
 	
-	private MetaEvent(long timestamp, byte[] data) {
+	/**
+	 * Constructs a new MetaEvent.
+	 * 
+	 * @param timestamp the time at which the MetaEvent occurs
+	 * @param data the data bytes for the MetaEvent
+	 */
+	public MetaEvent(long timestamp, byte[] data) {
 		super(timestamp, (byte) 0xFF, data);
 	}
 	
@@ -42,5 +50,18 @@ public class MetaEvent extends MIDIEvent {
 	 */
 	public byte getType() {
 		return getData()[0];
+	}
+	
+	/**
+	 * Constructs a new MetaEvent from a byte array.
+	 * 
+	 * @param in the byte array to construct the event from
+	 * @param time the time at which this MetaEvent occurs
+	 * @return the new MetaEvent
+	 */
+	public static MetaEvent readFromByteArray(byte[] in, long time) {
+		int end = 2;
+		end += Byte.toUnsignedInt(in[1]);
+		return new MetaEvent(time, Arrays.copyOfRange(in, 0, end));
 	}
 }

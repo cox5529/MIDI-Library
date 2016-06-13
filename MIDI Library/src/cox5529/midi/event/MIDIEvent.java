@@ -1,5 +1,7 @@
 package cox5529.midi.event;
 
+import java.util.Arrays;
+
 import cox5529.midi.Helper;
 
 /**
@@ -141,6 +143,27 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 			return 0;
 		else
 			return 1;
+	}
+	
+	/**
+	 * Constructs a new MIDIEvent from a byte array.
+	 * 
+	 * @param in the byte array to construct the event from
+	 * @param dtime the delta-time at which this MIDIEvent occurs
+	 * @param prevTime the time of the preceeding event
+	 * @return the new MIDIEvent
+	 */
+	public static MIDIEvent readFromByteArray(byte[] in, long dtime, long prevTime) {
+		byte status = in[0];
+		if(status == (byte) 0xFF) {
+			return MetaEvent.readFromByteArray(Arrays.copyOfRange(in, 1, in.length), dtime + prevTime);
+		}
+		int end = 0;
+		if(status / 0x10 == 0xC || status / 0x10 == 0xD)
+			end = 2;
+		else
+			end = 3;
+		return new MIDIEvent(dtime + prevTime, status, Arrays.copyOfRange(in, 1, end));
 	}
 	
 }

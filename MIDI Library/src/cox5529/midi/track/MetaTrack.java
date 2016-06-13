@@ -43,13 +43,15 @@ public class MetaTrack {
 	 * @return the byte[] representation of this MIDITrack
 	 */
 	public byte[] toOutputArray(boolean debug) {
+		events.add(MetaEvent.construct(events.get(events.size() - 1).getTimeStamp(), (byte) 0x2F, new byte[] {}));
 		Collections.sort(events);
 		ArrayList<byte[]> out = new ArrayList<byte[]>();
 		out.add(new byte[] { 0x4D, 0x54, 0x72, 0x6B });
-		int trackLength = 4;
+		int trackLength = 0;
 		for(int i = 0; i < events.size(); i++) {
 			trackLength += events.get(i).getSize((i == 0 ? 0: events.get(i - 1).getTimeStamp()));
 		}
+		System.out.println(trackLength);
 		out.add(ByteBuffer.allocate(4).putInt(trackLength).array());
 		if(debug)
 			System.out.println("Created track header.");
