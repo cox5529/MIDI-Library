@@ -25,6 +25,18 @@ public class MetaTrack {
 	}
 	
 	/**
+	 * Changes the tempo to the give tempo.
+	 * 
+	 * @param tempo the tempo to change the song to. Give in beats per minute.
+	 * @param timestamp the time at which the tempo should be changed
+	 */
+	public void changeTempo(int tempo, long timestamp) {
+		tempo = (6 * (int) Math.pow(10, 7)) / tempo;
+		byte[] b = ByteBuffer.allocate(4).putInt(tempo).array();
+		events.add(MetaEvent.construct(timestamp, (byte) 0x51, new byte[] { b[1], b[2], b[3] }));
+	}
+	
+	/**
 	 * Converts this MIDITrack to its output format in order to write to a file.
 	 * 
 	 * @param debug true if status should be printed to the console.

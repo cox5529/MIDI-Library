@@ -47,6 +47,15 @@ public class MIDIFile {
 	}
 	
 	/**
+	 * Gets the MetaTrack that corresponds to this file.
+	 * 
+	 * @return the MetaTrack that corresponds to this file
+	 */
+	public MetaTrack getMetaTrack() {
+		return meta;
+	}
+	
+	/**
 	 * Converts this MIDIFile to a .mid file
 	 * 
 	 * @param debug true if status should be printed to the console.
