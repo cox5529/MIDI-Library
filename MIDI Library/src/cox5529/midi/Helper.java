@@ -58,10 +58,12 @@ public class Helper {
 	 * @throws Exception if the note is out of range
 	 */
 	public static byte stringNoteToByteValue(String note) throws Exception {
-		int octave = (note.startsWith("-1") ? 0: Integer.parseInt(note.substring(0, 1)) + 1);
-		if(octave == 0)
+		int octave = Integer.parseInt(note.substring(0, 1));
+		if(note.charAt(1) == '0') {
+			octave = 10;
 			note = note.substring(1);
-		if(octave < -1 || octave > 10)
+		}
+		if(octave < 0 || octave > 10)
 			throw new Exception("Octave " + octave + " out of range.");
 		String pitch = note.toLowerCase().substring(1);
 		byte p = (byte) (octave * 12);
@@ -100,6 +102,6 @@ public class Helper {
 		if(p >= 0)
 			return p;
 		else
-			throw new Exception("Note " + note + " is out of range. Must be within -1C and 9G.");
+			throw new Exception("Note " + note + " is out of range. Must be within 0C and 10G.");
 	}
 }
