@@ -122,13 +122,16 @@ public class MusicTrack {
 				time[j - i] = in[j];
 			}
 			long dtime = Helper.midiTimeToDecimal(time);
-			MIDIEvent event = MIDIEvent.readFromByteArray(Arrays.copyOfRange(in, i + timeLength, in.length), dtime, (events.size() == 0 ? 0: events.get(events.size() - 1).getTimeStamp()));
+			MIDIEvent event = MIDIEvent.readFromByteArray(Arrays.copyOfRange(in, i + timeLength, in.length), dtime, (events.size() == 0 ? 0: events.get(events.size() - 1).getTimeStamp()), (events.size() == 0 ? 0x00: events.get(events.size() - 1).getStatus()));
 			if(!event.toString((events.size() == 0 ? 0: events.get(events.size() - 1).getTimeStamp())).equals("00 FF 2F 00"))
 				events.add(event);
 			if(debug) {
 				System.out.println("Read MIDI event with data: " + events.get(events.size() - 1).toString((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp())) + ".");
 			}
-			i += events.get(events.size() - 1).getSize((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp()));
+			int size = events.get(events.size() - 1).getSize((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp()));
+			if(in[i + timeLength] != event.getStatus())
+				i--;
+			i += size;
 		}
 		return new MusicTrack(events);
 	}

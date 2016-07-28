@@ -151,19 +151,28 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * @param in the byte array to construct the event from
 	 * @param dtime the delta-time at which this MIDIEvent occurs
 	 * @param prevTime the time of the preceeding event
+	 * @param prevStatus the status byte of the preceeding event
 	 * @return the new MIDIEvent
 	 */
-	public static MIDIEvent readFromByteArray(byte[] in, long dtime, long prevTime) {
+	public static MIDIEvent readFromByteArray(byte[] in, long dtime, long prevTime, byte prevStatus) {
 		byte status = in[0];
 		if(status == (byte) 0xFF) {
 			return MetaEvent.readFromByteArray(Arrays.copyOfRange(in, 1, in.length), dtime + prevTime);
 		}
+		int unsigStatus = Byte.toUnsignedInt(status);
 		int end = 0;
-		if(status / 0x10 == 0xC || status / 0x10 == 0xD)
-			end = 2;
+		int start = 1;
+		if(unsigStatus / 0x10 < 8 || unsigStatus / 0x10 > 0x0E) {
+			status = prevStatus;
+			unsigStatus = Byte.toUnsignedInt(status);
+			end--;
+			start = 0;
+		}
+		if(unsigStatus / 0x10 == 0xC || unsigStatus / 0x10 == 0xD)
+			end += 2;
 		else
-			end = 3;
-		return new MIDIEvent(dtime + prevTime, status, Arrays.copyOfRange(in, 1, end));
+			end += 3;
+		return new MIDIEvent(dtime + prevTime, status, Arrays.copyOfRange(in, start, end));
 	}
 	
 }

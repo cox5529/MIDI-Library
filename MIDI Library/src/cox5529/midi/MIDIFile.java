@@ -107,8 +107,9 @@ public class MIDIFile {
 		byte[] file = Files.readAllBytes(Paths.get(f.getAbsolutePath()));
 		if(debug)
 			System.out.println("Read file into byte array.");
-		int trackCount = file[10] * 128 + file[11];
-		int resolution = Byte.toUnsignedInt(file[12]) * 128 + Byte.toUnsignedInt(file[13]);
+		int trackCount = file[10] * 256 + file[11];
+		int resolution = Byte.toUnsignedInt(file[12]) * 256 + Byte.toUnsignedInt(file[13]);
+		System.out.println(resolution);
 		int index = 14;
 		if(debug)
 			System.out.println("Read MIDI header.");
