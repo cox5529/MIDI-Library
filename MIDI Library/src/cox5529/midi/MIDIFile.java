@@ -36,6 +36,15 @@ public class MIDIFile {
 	}
 	
 	/**
+	 * Changes the resolution of this MIDI file.
+	 * 
+	 * @param res the new resolution of this MIDI file
+	 */
+	public void setResolution(int res) {
+		this.resolution = res;
+	}
+	
+	/**
 	 * Creates a new MusicTrack and adds it to this MIDIFile.
 	 */
 	public void addTrack() {
