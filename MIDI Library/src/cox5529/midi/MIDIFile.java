@@ -30,7 +30,7 @@ public class MIDIFile {
 	public MIDIFile() {
 		meta = new MetaTrack();
 		tracks = new ArrayList<MusicTrack>();
-		resolution = 128;
+		resolution = 480;
 	}
 	
 	private MIDIFile(ArrayList<MusicTrack> tracks, int resolution) {
@@ -93,6 +93,8 @@ public class MIDIFile {
 			}
 		}
 		fos.close();
+		if(debug)
+			System.out.println("Wrote file \"" + f.getName() + "\".");
 	}
 	
 	/**
@@ -121,6 +123,8 @@ public class MIDIFile {
 			index += length + 8;
 		}
 		MIDIFile out = new MIDIFile(tracks, resolution);
+		if(debug)
+			System.out.println("Read file \"" + f.getName() + "\".");
 		return out;
 	}
 }
