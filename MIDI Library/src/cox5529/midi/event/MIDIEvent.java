@@ -143,7 +143,10 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 		if(ts > timeStamp)
 			return -1;
 		else if(ts == timeStamp)
-			return 0;
+			if(status == 0xFF)
+				return -1;
+			else
+				return 0;
 		else
 			return 1;
 	}
