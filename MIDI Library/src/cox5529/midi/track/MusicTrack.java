@@ -82,13 +82,21 @@ public class MusicTrack {
 		out.add(new byte[] { 0x4D, 0x54, 0x72, 0x6B });
 		int trackLength = 0;
 		for(int i = 0; i < events.size(); i++) {
-			trackLength += events.get(i).getSize((i == 0 ? 0: events.get(i - 1).getTimeStamp()));
+			boolean runningStat = false;
+			if(i != 0) {
+				runningStat = events.get(i - 1).getStatus() == events.get(i).getStatus();
+			}
+			trackLength += events.get(i).getSize((i == 0 ? 0: events.get(i - 1).getTimeStamp()), runningStat);
 		}
 		out.add(ByteBuffer.allocate(4).putInt(trackLength).array());
 		if(debug)
 			System.out.println("Created track header.");
 		for(int i = 0; i < events.size(); i++) {
-			out.add(events.get(i).toByteArray((i == 0 ? 0: events.get(i - 1).getTimeStamp())));
+			boolean runningStat = false;
+			if(i != 0) {
+				runningStat = events.get(i - 1).getStatus() == events.get(i).getStatus();
+			}
+			out.add(events.get(i).toByteArray((i == 0 ? 0: events.get(i - 1).getTimeStamp()), runningStat));
 			if(debug)
 				System.out.println("Created MIDI event with data: " + events.get(i).toString((i == 0 ? 0: events.get(i - 1).getTimeStamp())) + ".");
 		}
@@ -137,7 +145,7 @@ public class MusicTrack {
 			if(debug) {
 				System.out.println("Read MIDI event with data: " + events.get(events.size() - 1).toString((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp())) + ".");
 			}
-			int size = events.get(events.size() - 1).getSize((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp()));
+			int size = events.get(events.size() - 1).getSize((events.size() == 1 ? 0: events.get(events.size() - 2).getTimeStamp()), false);
 			if(in[i + timeLength] != event.getStatus())
 				i--;
 			i += size;

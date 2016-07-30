@@ -33,11 +33,12 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * Converts a MIDIEvent object to a byte[] in order to write the event to a file
 	 * 
 	 * @param prevTime the time of the previous event. If this is the first event in the track, then prevTime should be 0.
+	 * @param runningStat true if the status byte will be omitted
 	 * @return the byte[] representation of the MIDIEvent
 	 */
-	public byte[] toByteArray(long prevTime) {
+	public byte[] toByteArray(long prevTime, boolean runningStat) {
 		byte[] stamp = Helper.decimalToMIDITime(timeStamp - prevTime);
-		byte[] b = new byte[getSize(prevTime)];
+		byte[] b = new byte[getSize(prevTime, runningStat)];
 		for(int i = 0; i < stamp.length; i++) {
 			b[i] = stamp[i];
 		}
@@ -52,11 +53,12 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * Gets the size of this MIDIEvent in bytes
 	 * 
 	 * @param prevTime the time of the previous event. If this is the first event in the track, then prevTime should be 0.
+	 * @param runningStat true if the status byte will be omitted
 	 * @return the size of this MIDIEvent in bytes
 	 */
-	public int getSize(long prevTime) {
+	public int getSize(long prevTime, boolean runningStat) {
 		byte[] stamp = Helper.decimalToMIDITime(timeStamp - prevTime);
-		return stamp.length + 1 + data.length;
+		return stamp.length + 1 + data.length - (runningStat ? 1: 0);
 	}
 	
 	/**
@@ -120,7 +122,7 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * @return the String representation of this MIDIEvent
 	 */
 	public String toString(long prevTime) {
-		byte[] bytes = toByteArray(prevTime);
+		byte[] bytes = toByteArray(prevTime, false);
 		String re = "";
 		for(int i = 0; i < bytes.length; i++) {
 			re += String.format("%02X", bytes[i]) + (i == bytes.length - 1 ? "": " ");
