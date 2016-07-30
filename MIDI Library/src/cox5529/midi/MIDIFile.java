@@ -9,7 +9,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import cox5529.midi.track.MetaTrack;
 import cox5529.midi.track.MusicTrack;
 
 /**
@@ -21,16 +20,14 @@ import cox5529.midi.track.MusicTrack;
 public class MIDIFile {
 	
 	private int resolution;
-	private MetaTrack meta;
 	private ArrayList<MusicTrack> tracks;
 	
 	/**
 	 * Constructs a new MIDIFile.
 	 */
 	public MIDIFile() {
-		meta = new MetaTrack();
 		tracks = new ArrayList<MusicTrack>();
-		resolution = 480;
+		resolution = 96;
 	}
 	
 	private MIDIFile(ArrayList<MusicTrack> tracks, int resolution) {
@@ -55,15 +52,6 @@ public class MIDIFile {
 	}
 	
 	/**
-	 * Gets the MetaTrack that corresponds to this file.
-	 * 
-	 * @return the MetaTrack that corresponds to this file
-	 */
-	public MetaTrack getMetaTrack() {
-		return meta;
-	}
-	
-	/**
 	 * Converts this MIDIFile to a .mid file
 	 * 
 	 * @param debug true if status should be printed to the console.
@@ -75,16 +63,10 @@ public class MIDIFile {
 		fos.write(new byte[] { 0x4D, 0x54, 0x68, 0x64 }); // Literal "MThd"
 		fos.write(new byte[] { 0x00, 0x00, 0x00, 0x06 });
 		fos.write(new byte[] { 0x00, 0x01 });
-		fos.write(ByteBuffer.allocate(4).putInt(tracks.size() + (meta == null ? 0: 1)).array(), 2, 2);
+		fos.write(ByteBuffer.allocate(4).putInt(tracks.size()).array(), 2, 2);
 		fos.write(ByteBuffer.allocate(4).putInt(resolution).array(), 2, 2);
 		if(debug) {
 			System.out.println("Wrote MIDI header.");
-		}
-		if(meta != null) {
-			fos.write(meta.toOutputArray(debug));
-			if(debug) {
-				System.out.println("Wrote Meta track.");
-			}
 		}
 		for(int i = 0; i < tracks.size(); i++) {
 			fos.write(tracks.get(i).toOutputArray(debug));
