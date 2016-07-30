@@ -36,6 +36,15 @@ public class MusicTrack {
 	}
 	
 	/**
+	 * Adds a MIDIEvent to the track.
+	 * 
+	 * @param event the event to add
+	 */
+	public void addEvent(MIDIEvent event) {
+		events.add(event);
+	}
+	
+	/**
 	 * Adds a note to this MusicTrack
 	 * 
 	 * @param time the timestamp at which the note begins

@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import cox5529.midi.event.MIDIEvent;
 import cox5529.midi.event.MetaEvent;
 
 /**
@@ -34,6 +35,15 @@ public class MetaTrack {
 		tempo = (6 * (int) Math.pow(10, 7)) / tempo;
 		byte[] b = ByteBuffer.allocate(4).putInt(tempo).array();
 		events.add(MetaEvent.construct(timestamp, (byte) 0x51, new byte[] { b[1], b[2], b[3] }));
+	}
+	
+	/**
+	 * Adds a MetaEvent to the track.
+	 * 
+	 * @param event the event to add
+	 */
+	public void addEvent(MetaEvent event) {
+		events.add(event);
 	}
 	
 	/**
