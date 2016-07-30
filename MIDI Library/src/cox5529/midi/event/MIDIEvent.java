@@ -42,9 +42,10 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 		for(int i = 0; i < stamp.length; i++) {
 			b[i] = stamp[i];
 		}
-		b[stamp.length] = status;
+		if(!runningStat)
+			b[stamp.length] = status;
 		for(int i = 0; i < data.length; i++) {
-			b[stamp.length + 1 + i] = data[i];
+			b[stamp.length + (runningStat ? 0: 1) + i] = data[i];
 		}
 		return b;
 	}
