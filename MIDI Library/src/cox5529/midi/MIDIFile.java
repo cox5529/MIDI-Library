@@ -36,6 +36,15 @@ public class MIDIFile {
 	}
 	
 	/**
+	 * Gets the resolution of this MIDIFile.
+	 * 
+	 * @return the resolution of this MIDIFile.
+	 */
+	public int getResolution() {
+		return this.resolution;
+	}
+	
+	/**
 	 * Changes the resolution of this MIDI file.
 	 * 
 	 * @param res the new resolution of this MIDI file
