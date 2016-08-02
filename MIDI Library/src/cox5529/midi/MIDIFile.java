@@ -61,6 +61,15 @@ public class MIDIFile {
 	}
 	
 	/**
+	 * Adds a track to this MIDIFile.
+	 * 
+	 * @param track the track to add to this MIDIFile
+	 */
+	public void addTrack(MusicTrack track) {
+		tracks.add(track);
+	}
+	
+	/**
 	 * Gets the ArrayList of MusicTracks within this MIDIFile
 	 * 
 	 * @return the ArrayList of MusicTracks within this MIDIFile
