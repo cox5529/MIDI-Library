@@ -70,6 +70,19 @@ public class MusicTrack {
 	}
 	
 	/**
+	 * Gets the ArrayList of MIDIEvents that make up this MusicTrack.
+	 * 
+	 * @return the ArrayList of MIDIEvents
+	 */
+	public ArrayList<MIDIEvent> getEvents() {
+		ArrayList<MIDIEvent> re = new ArrayList<MIDIEvent>();
+		for(int i = 0; i < events.size(); i++) {
+			re.add(events.get(i).clone());
+		}
+		return re;
+	}
+	
+	/**
 	 * Converts this MIDITrack to its output format in order to write to a file.
 	 * 
 	 * @param debug true if status should be printed to the console.

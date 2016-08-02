@@ -133,6 +133,19 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	}
 	
 	/**
+	 * Creates a copy of this MIDIEvent with no common references.
+	 * 
+	 * @return the copy
+	 */
+	public MIDIEvent clone() {
+		byte[] data = new byte[this.data.length];
+		for(int i = 0; i < data.length; i++) {
+			data[i] = this.data[i];
+		}
+		return new MIDIEvent(timeStamp, status, data);
+	}
+	
+	/**
 	 * Compares this object with the specified object for order. Returns a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object.
 	 * 
 	 * @param event the MIDIEvent to compare this one to
