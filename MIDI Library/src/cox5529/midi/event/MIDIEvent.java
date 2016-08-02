@@ -112,7 +112,7 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * 
 	 * @param data what the data bytes are being changed to
 	 */
-	public void setData2(byte[] data) {
+	public void setData(byte[] data) {
 		this.data = data;
 	}
 	
@@ -127,6 +127,20 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 		String re = "";
 		for(int i = 0; i < bytes.length; i++) {
 			re += String.format("%02X", bytes[i]) + (i == bytes.length - 1 ? "": " ");
+		}
+		return re;
+		
+	}
+	
+	/**
+	 * Gets the String representation of this MIDIEvent.
+	 * 
+	 * @return the String representation of this MIDIEvent
+	 */
+	public String toString() {
+		String re = String.format("%02x ", status);
+		for(int i = 0; i < data.length; i++) {
+			re += String.format("%02X", data[i]) + (i == data.length - 1 ? "": " ");
 		}
 		return re;
 		
