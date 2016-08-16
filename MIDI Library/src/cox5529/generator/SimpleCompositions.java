@@ -1,10 +1,13 @@
 package cox5529.generator;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import cox5529.generator.storage.Measure;
 import cox5529.midi.MIDIFile;
 import cox5529.midi.event.MIDIEvent;
+import cox5529.midi.event.TimeSignature;
 import cox5529.midi.track.MusicTrack;
 
 /**
@@ -40,11 +43,18 @@ public class SimpleCompositions {
 					event.setTimeStamp(curStart - measureStart);
 					cur.add(event);
 				} else if(curStart != -1 && (event.getStatus() == (byte) 0x90 && event.getData()[1] == 0) || event.getStatus() == (byte) 0x80) {
-					long dur = event.getTimeStamp() - measureStart;
-					event.setTimeStamp(event.getTimeStamp() - measureStart);
+					long noteDur = event.getTimeStamp() - curStart;
+					if(noteDur == 455)
+						noteDur = 479;
+					else if(noteDur == 227)
+						noteDur = 239;
+					else if(noteDur == 113)
+						noteDur = 119;
+					long dur = curStart + noteDur - measureStart;
+					event.setTimeStamp(curStart + noteDur - measureStart);
 					curStart = -1;
 					cur.add(event);
-					if(dur >= maxDur) {
+					if(dur >= maxDur || maxDur - dur < 1.0 / 32 * output.getResolution()) {
 						boolean tie = false;
 						if(dur > maxDur) {
 							cur.remove(cur.size() - 1);
@@ -66,6 +76,7 @@ public class SimpleCompositions {
 				}
 			}
 			measures.add(new Measure(cur, false));
+			
 			MusicTrack newTrack = new MusicTrack();
 			long pos = 0;
 			byte[] prev = null;

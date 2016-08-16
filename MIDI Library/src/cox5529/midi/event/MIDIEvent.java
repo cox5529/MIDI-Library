@@ -205,7 +205,10 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 			end += 2;
 		else
 			end += 3;
-		return new MIDIEvent(dtime + prevTime, status, Arrays.copyOfRange(in, start, end));
+		//if(unsigStatus / 0x10 != 0xB)
+			return new MIDIEvent(dtime + prevTime, status, Arrays.copyOfRange(in, start, end));
+		//else
+			//return new MIDIEvent(0, (byte) 0xFF, new byte[] { 0x2F, 0x00 });
 	}
 	
 }

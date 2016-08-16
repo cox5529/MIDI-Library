@@ -55,9 +55,12 @@ public class MIDIFile {
 	
 	/**
 	 * Creates a new MusicTrack and adds it to this MIDIFile.
+	 * 
+	 * @return the MusicTrack created
 	 */
-	public void addTrack() {
+	public MusicTrack addTrack() {
 		tracks.add(new MusicTrack());
+		return tracks.get(tracks.size() - 1);
 	}
 	
 	/**
