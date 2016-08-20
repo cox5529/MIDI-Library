@@ -9,6 +9,260 @@ package cox5529.midi;
 public class Helper {
 	
 	/**
+	 * Determines if a note is in a specified key.
+	 * 
+	 * @param note the note to test
+	 * @param sharps the number of sharps in a key. If there are flats, number of flats * -1
+	 * @param isMajor true if the key is major
+	 * @return true if the note is in key
+	 */
+	public static boolean isInKey(byte note, int sharps, boolean isMajor) {
+		while(note > 0x11)
+			note -= 12;
+		if(note < 6) // 6 = c1
+			note += 12;
+		byte base = 6;
+		if(sharps == 0)
+			if(isMajor)
+				base = 6;
+			else
+				base = 15;
+		else if(sharps == 1)
+			if(isMajor)
+				base = 11;
+			else
+				base = 10;
+		else if(sharps == 2)
+			if(isMajor)
+				base = 8;
+			else
+				base = 17;
+		else if(sharps == 3)
+			if(isMajor)
+				base = 15;
+			else
+				base = 12;
+		else if(sharps == 4)
+			if(isMajor)
+				base = 10;
+			else
+				base = 7;
+		else if(sharps == 5)
+			if(isMajor)
+				base = 17;
+			else
+				base = 14;
+		else if(sharps == 6)
+			if(isMajor)
+				base = 12;
+			else
+				base = 9;
+		else if(sharps == 7)
+			if(isMajor)
+				base = 7;
+			else
+				base = 16;
+		else if(sharps == -1)
+			if(isMajor)
+				base = 11;
+			else
+				base = 8;
+		else if(sharps == -2)
+			if(isMajor)
+				base = 16;
+			else
+				base = 13;
+		else if(sharps == -3)
+			if(isMajor)
+				base = 9;
+			else
+				base = 6;
+		else if(sharps == -4)
+			if(isMajor)
+				base = 14;
+			else
+				base = 11;
+		else if(sharps == -5)
+			if(isMajor)
+				base = 7;
+			else
+				base = 16;
+		else if(sharps == -6)
+			if(isMajor)
+				base = 12;
+			else
+				base = 9;
+		else if(sharps == -7)
+			if(isMajor)
+				base = 17;
+			else
+				base = 12;
+		byte[] key = new byte[12];
+		if(isMajor) {
+			key[0] = base;
+			key[1] = (byte) (key[0] + 2);
+			key[2] = (byte) (key[1] + 2);
+			key[3] = (byte) (key[2] + 1);
+			key[4] = (byte) (key[3] + 2);
+			key[5] = (byte) (key[4] + 2);
+			key[6] = (byte) (key[5] + 2);
+			key[7] = (byte) (key[6] + 1);
+		} else {
+			key[0] = base;
+			key[1] = (byte) (key[0] + 2);
+			key[2] = (byte) (key[1] + 1);
+			key[3] = (byte) (key[2] + 2);
+			key[4] = (byte) (key[3] + 2);
+			key[5] = (byte) (key[4] + 1);
+			key[6] = (byte) (key[5] + 2);
+			key[7] = (byte) (key[6] + 2);
+		}
+		for(int i = 0; i < key.length; i++) {
+			if(key[i] == note)
+				return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Generates an array of bytes that will represent the pitches of a specified chord.
+	 * 
+	 * @param sharps the number of sharps in the key, or number of flats * -1
+	 * @param isMajor true if major, false if minor
+	 * @param low the base note of the chord
+	 * @return the array of bytes representing the chord or an empty array if no chord will meet the requirements of the key.
+	 */
+	public static byte[] getChord(int sharps, boolean isMajor, byte low) {
+		byte base = 6;
+		if(sharps == 0)
+			if(isMajor)
+				base = 6;
+			else
+				base = 15;
+		else if(sharps == 1)
+			if(isMajor)
+				base = 11;
+			else
+				base = 10;
+		else if(sharps == 2)
+			if(isMajor)
+				base = 8;
+			else
+				base = 17;
+		else if(sharps == 3)
+			if(isMajor)
+				base = 15;
+			else
+				base = 12;
+		else if(sharps == 4)
+			if(isMajor)
+				base = 10;
+			else
+				base = 7;
+		else if(sharps == 5)
+			if(isMajor)
+				base = 17;
+			else
+				base = 14;
+		else if(sharps == 6)
+			if(isMajor)
+				base = 12;
+			else
+				base = 9;
+		else if(sharps == 7)
+			if(isMajor)
+				base = 7;
+			else
+				base = 16;
+		else if(sharps == -1)
+			if(isMajor)
+				base = 11;
+			else
+				base = 8;
+		else if(sharps == -2)
+			if(isMajor)
+				base = 16;
+			else
+				base = 13;
+		else if(sharps == -3)
+			if(isMajor)
+				base = 9;
+			else
+				base = 6;
+		else if(sharps == -4)
+			if(isMajor)
+				base = 14;
+			else
+				base = 11;
+		else if(sharps == -5)
+			if(isMajor)
+				base = 7;
+			else
+				base = 16;
+		else if(sharps == -6)
+			if(isMajor)
+				base = 12;
+			else
+				base = 9;
+		else if(sharps == -7)
+			if(isMajor)
+				base = 17;
+			else
+				base = 12;
+		base -= 6;
+		int b = base;
+		while(b <= low - 12)
+			b += 12;
+		int offset = b - base;
+		byte[] key = new byte[7];
+		if(isMajor) {
+			key[0] = base;
+			key[1] = (byte) (key[0] + 2);
+			key[2] = (byte) (key[1] + 2);
+			key[3] = (byte) (key[2] + 1);
+			key[4] = (byte) (key[3] + 2);
+			key[5] = (byte) (key[4] + 2);
+			key[6] = (byte) (key[5] + 2);
+		} else {
+			key[0] = base;
+			key[1] = (byte) (key[0] + 2);
+			key[2] = (byte) (key[1] + 1);
+			key[3] = (byte) (key[2] + 2);
+			key[4] = (byte) (key[3] + 2);
+			key[5] = (byte) (key[4] + 1);
+			key[6] = (byte) (key[5] + 2);
+		}
+		int deg = 0;
+		for(int i = 0; i < key.length; i++) {
+			key[i] += offset;
+			if(key[i] == low) {
+				deg = i + 1;
+				break;
+			}
+		}
+		if((deg == 1 || deg == 4 || deg == 5) && !isMajor)
+			if(deg == 1 || deg == 5)
+				deg++;
+			else if(deg == 4)
+				deg--;
+		if((deg == 2 || deg == 3 || deg == 6) && isMajor) {
+			if(deg == 2 || deg == 6)
+				deg--;
+			else if(deg == 3)
+				deg++;
+		}
+		if((deg == 1 || deg == 4 || deg == 5) && isMajor) {
+			return new byte[] { low, (byte) (low + 4), (byte) (low + 7) };
+		} else if((deg == 2 || deg == 3 || deg == 6) && !isMajor) {
+			return new byte[] { low, (byte) (low + 3), (byte) (low + 7) };
+		} else if(deg == 7)
+			return new byte[] { low, (byte) (low + 3), (byte) (low + 6) };
+		else {
+			return new byte[] {};
+		}
+	}
+	
+	/**
 	 * Converts a time in ticks to its MIDI representation.
 	 * 
 	 * @param n the time in ticks to convert

@@ -12,7 +12,7 @@ import java.util.Map.Entry;
  * @author Brandon Cox
  * 		
  */
-public class Note {
+public class Note implements Comparable<Note> {
 	
 	private HashMap<Byte, Integer> follow; // pitch that follows this note, frequency
 	private byte[] precede;
@@ -57,7 +57,11 @@ public class Note {
 	 * @return the precede array for this object
 	 */
 	public byte[] getPrecede() {
-		return precede;
+		byte[] re = new byte[precede.length];
+		for(int i = 0; i < re.length; i++) {
+			re[i] = precede[i];
+		}
+		return re;
 	}
 	
 	/**
@@ -119,6 +123,23 @@ public class Note {
 			Entry<Byte, Integer> pair = (Entry<Byte, Integer>) it.next();
 			re += pair.getKey() + "x" + pair.getValue() + " ";
 		}
-		return re;
+		return re + "\n";
+	}
+	
+	/**
+	 * Compares this Note to another.
+	 * 
+	 * @param n the note to compare this one to
+	 * @return -1 if this Note should be sorted before the given one, 1 if after, or 0 if together.
+	 */
+	@Override public int compareTo(Note n) {
+		byte[] nPre = n.getPrecede();
+		for(int i = 0; i < precede.length; i++) {
+			if(nPre[i] > precede[i])
+				return -1;
+			else if(nPre[i] < precede[i])
+				return 1;
+		}
+		return 0;
 	}
 }

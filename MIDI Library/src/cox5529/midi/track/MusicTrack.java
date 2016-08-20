@@ -83,6 +83,18 @@ public class MusicTrack {
 	}
 	
 	/**
+	 * Removes the last event in the events ArrayList.
+	 * 
+	 * @return the last event in the events ArrayList that was just removed.
+	 */
+	public MIDIEvent removeLastEvent() {
+		if(events.size() > 0)
+			return events.remove(events.size() - 1);
+		else
+			return null;
+	}
+	
+	/**
 	 * Converts this MIDITrack to its output format in order to write to a file.
 	 * 
 	 * @param debug true if status should be printed to the console.
