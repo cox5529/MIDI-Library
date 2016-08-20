@@ -2,7 +2,6 @@ package cox5529.generator;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 import cox5529.generator.storage.Measure;
