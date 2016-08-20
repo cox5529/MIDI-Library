@@ -2,6 +2,7 @@ package cox5529.generator;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 import cox5529.generator.storage.Measure;
@@ -264,10 +265,9 @@ public class SimpleCompositions {
 	 * @param input the given file to randomize
 	 * @param duration the duration of the song to be generated in measures
 	 * @param depth the depth to scan when generating a pitch
-	 * @param percussion true if percussion track is to be generated
 	 * @return the generated object
 	 */
-	public static MIDIFile fullCompose(MIDIFile input, int duration, int depth, boolean percussion) {
+	public static MIDIFile fullCompose(MIDIFile input, int duration, int depth) {
 		boolean isMajor = true;
 		int sharps = 0;
 		int tempo = 120;
@@ -286,6 +286,7 @@ public class SimpleCompositions {
 		long curStart = -1;
 		long[] noteSum = new long[tracks.size()];
 		long[] noteTotal = new long[tracks.size()];
+		long[] volTotal = new long[tracks.size()];
 		for(int j = 0; j < events.size(); j++) {
 			MIDIEvent event = events.get(j);
 			if(event.getStatus() == (byte) 0x90 && event.getData()[1] != 0) {
@@ -301,8 +302,9 @@ public class SimpleCompositions {
 				}
 				if(processed >= depth && j != events.size() - 3) {
 					// Pitch stuff
-					noteSum[0]++;
-					noteTotal[0] += event.getData()[0];
+					noteSum[0] += event.getData()[0];
+					noteTotal[0]++;
+					volTotal[0] += event.getData()[1];
 					byte[] key = new byte[depth];
 					for(int k = 0; k < depth; k++) {
 						key[k] = events.get(j - k).getData()[0];
@@ -402,6 +404,7 @@ public class SimpleCompositions {
 						continue;
 					}
 					noteSum[i] += event.getData()[0];
+					volTotal[i] += event.getData()[1];
 					noteTotal[i]++;
 					curStart = event.getTimeStamp();
 					event.setTimeStamp(curStart - measureStart);
@@ -453,15 +456,16 @@ public class SimpleCompositions {
 		Collections.sort(notes);
 		
 		long[] noteAverage = new long[noteSum.length];
+		long[] volAverage = new long[volTotal.length];
 		for(int i = 0; i < noteAverage.length; i++) {
 			noteAverage[i] = noteSum[i] / noteTotal[i];
 			noteAverage[i] -= noteAverage[i] % 12;
+			volAverage[i] = volTotal[i] / noteTotal[i];
 		}
 		
 		MusicTrack newTrack = new MusicTrack();
 		newTrack.addEvent(TimeSignature.construct(0, (byte) 4, (byte) 4));
 		Tempo t = Tempo.construct(0, tempo);
-		System.out.println(t);
 		newTrack.addEvent(t);
 		newTrack.changeInstrument(0, 0, instruments[0]);
 		MusicTrack[] supportTracks = new MusicTrack[tracks.size() - 1];
@@ -515,7 +519,7 @@ public class SimpleCompositions {
 						}
 						if(pass) {
 							byte[] data = new byte[2];
-							data[1] = 0x3F;
+							data[1] = (byte) volAverage[0];
 							data[0] = notes.get(m).getFollowPitch();
 							event.setData(data);
 							for(int n = depth - 1; n > 0; n--) {
@@ -540,14 +544,12 @@ public class SimpleCompositions {
 									e1.setTimeStamp(pos + e1.getTimeStamp());
 									e2.setTimeStamp(pos + e2.getTimeStamp());
 									byte[] data = new byte[2];
-									if(i % 3 == 2) { // bottom
+									data[1] = (byte) volAverage[i + 1];
+									if(i % 3 == 0) {
 										data[0] = (byte) (chord[2] % 12 + noteAverage[i + 1]);
-										data[1] = 0x30;
 									} else if(i % 3 == 1) {
 										data[0] = (byte) (chord[1] % 12 + noteAverage[i + 1]);
-										data[1] = 0x35;
-									} else if(i % 3 == 0) { // top
-										data[1] = 0x3F;
+									} else if(i % 3 == 2) {
 										data[0] = (byte) (chord[0] % 12 + noteAverage[i + 1]);
 									}
 									e1.setData(data);
