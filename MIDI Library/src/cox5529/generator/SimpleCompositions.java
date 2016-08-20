@@ -1,7 +1,5 @@
 package cox5529.generator;
 
-import java.io.File;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,6 +9,7 @@ import cox5529.generator.storage.Note;
 import cox5529.midi.Helper;
 import cox5529.midi.MIDIFile;
 import cox5529.midi.event.MIDIEvent;
+import cox5529.midi.event.Tempo;
 import cox5529.midi.event.TimeSignature;
 import cox5529.midi.track.MusicTrack;
 
@@ -276,7 +275,7 @@ public class SimpleCompositions {
 		byte[] instruments = new byte[tracks.size()];
 		MIDIFile output = new MIDIFile();
 		output.setResolution(input.getResolution());
-		
+		int res = output.getResolution();
 		ArrayList<MIDIEvent> events = tracks.get(0).getEvents();
 		ArrayList<Measure> measures = new ArrayList<Measure>();
 		ArrayList<Note> notes = new ArrayList<Note>();
@@ -285,10 +284,12 @@ public class SimpleCompositions {
 		long measureStart = 0;
 		long maxDur = input.getResolution() * 4 - 1;
 		long curStart = -1;
+		long[] noteSum = new long[tracks.size()];
+		long[] noteTotal = new long[tracks.size()];
 		for(int j = 0; j < events.size(); j++) {
 			MIDIEvent event = events.get(j);
 			if(event.getStatus() == (byte) 0x90 && event.getData()[1] != 0) {
-				if(event.getTimeStamp() > measureStart + output.getResolution() * 4) {
+				if(event.getTimeStamp() > measureStart + res * 4) {
 					ArrayList<MIDIEvent> toAdd = new ArrayList<MIDIEvent>();
 					for(int k = 0; k < cur.size(); k++) {
 						toAdd.add(cur.get(k));
@@ -300,6 +301,8 @@ public class SimpleCompositions {
 				}
 				if(processed >= depth && j != events.size() - 3) {
 					// Pitch stuff
+					noteSum[0]++;
+					noteTotal[0] += event.getData()[0];
 					byte[] key = new byte[depth];
 					for(int k = 0; k < depth; k++) {
 						key[k] = events.get(j - k).getData()[0];
@@ -341,7 +344,7 @@ public class SimpleCompositions {
 				event.setTimeStamp(curStart + noteDur - measureStart);
 				curStart = -1;
 				cur.add(event);
-				if(dur >= maxDur || maxDur - dur < 1.0 / 32 * output.getResolution()) {
+				if(dur >= maxDur || maxDur - dur < 1.0 / 32 * res) {
 					boolean tie = false;
 					if(dur > maxDur) {
 						cur.remove(cur.size() - 1);
@@ -366,7 +369,7 @@ public class SimpleCompositions {
 					isMajor = false;
 			} else if(event.getStatus() == (byte) 0xFF && event.getData()[0] == 0x51) {
 				byte[] data = event.getData();
-				tempo = (int) (0.00024 * new BigInteger(new byte[] { data[2], data[3], data[4] }).intValue());
+				tempo = (int) (0.00006 * new BigInteger(new byte[] { data[2], data[3], data[4] }).intValue());
 			} else if(event.getStatus() == (byte) 0xC0) {
 				instruments[0] = event.getData()[0];
 			}
@@ -376,8 +379,7 @@ public class SimpleCompositions {
 			toAdd1.add(cur.get(k));
 		}
 		measures.add(new Measure(toAdd1, false));
-		long[] noteSum = new long[tracks.size() - 1];
-		long[] noteTotal = new long[tracks.size() - 1];
+		
 		for(int i = 1; i < tracks.size(); i++) {
 			cur.clear();
 			measureStart = 0;
@@ -388,7 +390,7 @@ public class SimpleCompositions {
 				MIDIEvent event = supportEvents.get(j);
 				int status = Byte.toUnsignedInt(event.getStatus());
 				if(status / 16 == 0x9 && event.getData()[1] != 0) {
-					if(event.getTimeStamp() > measureStart + output.getResolution() * 4 - 1) {
+					if(event.getTimeStamp() > measureStart + res * 4 - 1) {
 						toAdd1.clear();
 						for(int k = 0; k < cur.size(); k++) {
 							toAdd1.add(cur.get(k));
@@ -399,8 +401,8 @@ public class SimpleCompositions {
 						j--;
 						continue;
 					}
-					noteSum[i - 1] += event.getData()[0];
-					noteTotal[i - 1]++;
+					noteSum[i] += event.getData()[0];
+					noteTotal[i]++;
 					curStart = event.getTimeStamp();
 					event.setTimeStamp(curStart - measureStart);
 					cur.add(event);
@@ -417,7 +419,7 @@ public class SimpleCompositions {
 					event.setTimeStamp(curStart + noteDur - measureStart);
 					curStart = -1;
 					cur.add(event);
-					if(dur >= maxDur || maxDur - dur < 1.0 / 32 * output.getResolution()) {
+					if(dur >= maxDur || maxDur - dur < 1.0 / 32 * res) {
 						boolean tie = false;
 						if(dur > maxDur) {
 							cur.remove(cur.size() - 1);
@@ -450,36 +452,6 @@ public class SimpleCompositions {
 		}
 		Collections.sort(notes);
 		
-		// TEST
-		for(int i = 0; i < measures.size(); i++) {
-			MIDIFile f = new MIDIFile();
-			f.setResolution(480);
-			MusicTrack[] t = new MusicTrack[tracks.size()];
-			ArrayList<MIDIEvent> e = measures.get(i).getEvents();
-			ArrayList<ArrayList<MIDIEvent>> sup = measures.get(i).getSupport();
-			for(int j = 0; j < t.length; j++) {
-				t[j] = new MusicTrack();
-				t[j].addEvent(TimeSignature.construct(0, (byte) 4, (byte) 4));
-				t[j].changeInstrument(0, j, instruments[j]);
-				ArrayList<MIDIEvent> toWrite = new ArrayList<MIDIEvent>();
-				if(j == 0)
-					toWrite = e;
-				else
-					toWrite = sup.get(j - 1);
-				for(int k = 0; k < toWrite.size(); k++) {
-					t[j].addEvent(toWrite.get(k));
-				}
-				if(toWrite.size() > 0)
-					f.addTrack(t[j]);
-			}
-			try {
-				f.write(new File("Measure test " + i + ".mid"), false);
-			} catch(IOException e1) {
-				e1.printStackTrace();
-			}
-		}
-		// END TEST
-		
 		long[] noteAverage = new long[noteSum.length];
 		for(int i = 0; i < noteAverage.length; i++) {
 			noteAverage[i] = noteSum[i] / noteTotal[i];
@@ -487,8 +459,11 @@ public class SimpleCompositions {
 		}
 		
 		MusicTrack newTrack = new MusicTrack();
-		newTrack.changeInstrument(0, 0, instruments[0]);
 		newTrack.addEvent(TimeSignature.construct(0, (byte) 4, (byte) 4));
+		Tempo t = Tempo.construct(0, tempo);
+		System.out.println(t);
+		newTrack.addEvent(t);
+		newTrack.changeInstrument(0, 0, instruments[0]);
 		MusicTrack[] supportTracks = new MusicTrack[tracks.size() - 1];
 		for(int i = 0; i < supportTracks.length; i++) {
 			supportTracks[i] = new MusicTrack();
@@ -497,14 +472,23 @@ public class SimpleCompositions {
 		long pos = 0;
 		byte[] prev = null;
 		byte[] prevPitch = notes.get((int) (Math.random() * notes.size())).getPrecede();
-		boolean[] used = new boolean[measures.size()];
+		Measure last = measures.get((int) (Math.random() * measures.size()));
 		for(int j = 0; j < duration; j++) {
 			ArrayList<MIDIEvent> newEvents = new ArrayList<MIDIEvent>();
 			Measure toAdd = null;
 			while(newEvents.size() == 0) {
-				int v = (int) (Math.random() * measures.size());
-				used[v] = true;
-				toAdd = measures.get(v);
+				Measure[] set = new Measure[3];
+				for(int i = 0; i < set.length; i++) {
+					set[i] = measures.get((int) (Math.random() * measures.size()));
+				}
+				int closest = 0;
+				for(int i = 1; i < set.length; i++) {
+					if(Math.abs(set[closest].getPartialAverageSpeed(res * 2, false) - last.getPartialAverageSpeed(res * 2, true)) > Math.abs(set[i].getPartialAverageSpeed(res * 2, false) - last.getPartialAverageSpeed(res * 2, true))) {
+						closest = i;
+					}
+				}
+				toAdd = set[closest];
+				last = toAdd;
 				newEvents = toAdd.getEvents();
 			}
 			pos = input.getResolution() * 4 * j;
@@ -556,13 +540,15 @@ public class SimpleCompositions {
 									e1.setTimeStamp(pos + e1.getTimeStamp());
 									e2.setTimeStamp(pos + e2.getTimeStamp());
 									byte[] data = new byte[2];
-									data[1] = 0x3F;
-									if(i % 3 == 0) { // top
-										data[0] = (byte) (chord[2] % 12 + noteAverage[i]);
+									if(i % 3 == 2) { // bottom
+										data[0] = (byte) (chord[2] % 12 + noteAverage[i + 1]);
+										data[1] = 0x30;
 									} else if(i % 3 == 1) {
-										data[0] = (byte) (chord[1] % 12 + noteAverage[i]);
-									} else if(i % 3 == 2) { // bottom
-										data[0] = (byte) (chord[0] % 12 + noteAverage[i]);
+										data[0] = (byte) (chord[1] % 12 + noteAverage[i + 1]);
+										data[1] = 0x35;
+									} else if(i % 3 == 0) { // top
+										data[1] = 0x3F;
+										data[0] = (byte) (chord[0] % 12 + noteAverage[i + 1]);
 									}
 									e1.setData(data);
 									e2.setData(new byte[] { data[0], 0 });
@@ -597,11 +583,11 @@ public class SimpleCompositions {
 						byte[] data = new byte[2];
 						data[1] = 0x3F;
 						if(i % 3 == 0) { // top
-							data[0] = (byte) (chord[2] % 12 + noteAverage[i]);
+							data[0] = (byte) (chord[2] % 12 + noteAverage[i + 1]);
 						} else if(i % 3 == 1) {
-							data[0] = (byte) (chord[1] % 12 + noteAverage[i]);
+							data[0] = (byte) (chord[1] % 12 + noteAverage[i + 1]);
 						} else if(i % 3 == 2) { // bottom
-							data[0] = (byte) (chord[0] % 12 + noteAverage[i]);
+							data[0] = (byte) (chord[0] % 12 + noteAverage[i + 1]);
 						}
 						e1.setData(data);
 						e2.setData(new byte[] { data[0], 0 });

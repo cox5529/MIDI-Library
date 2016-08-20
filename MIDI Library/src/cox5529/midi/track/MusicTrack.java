@@ -109,7 +109,7 @@ public class MusicTrack {
 		for(int i = 0; i < events.size(); i++) {
 			boolean runningStat = false;
 			if(i != 0) {
-				runningStat = events.get(i - 1).getStatus() == events.get(i).getStatus();
+				runningStat = events.get(i).getStatus() != (byte) 0xFF && events.get(i - 1).getStatus() == events.get(i).getStatus();
 			}
 			trackLength += events.get(i).getSize((i == 0 ? 0: events.get(i - 1).getTimeStamp()), runningStat);
 		}
@@ -119,7 +119,7 @@ public class MusicTrack {
 		for(int i = 0; i < events.size(); i++) {
 			boolean runningStat = false;
 			if(i != 0) {
-				runningStat = events.get(i - 1).getStatus() == events.get(i).getStatus();
+				runningStat = events.get(i).getStatus() != (byte) 0xFF && events.get(i - 1).getStatus() == events.get(i).getStatus();
 			}
 			out.add(events.get(i).toByteArray((i == 0 ? 0: events.get(i - 1).getTimeStamp()), runningStat));
 			if(debug)
