@@ -3,12 +3,17 @@ package cox5529.midi;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import cox5529.generator.storage.Measure;
+import cox5529.midi.event.MIDIEvent;
+import cox5529.midi.event.Tempo;
+import cox5529.midi.event.TimeSignature;
 import cox5529.midi.track.MusicTrack;
 
 /**
@@ -79,6 +84,187 @@ public class MIDIFile {
 	 */
 	public ArrayList<MusicTrack> getTracks() {
 		return tracks;
+	}
+	
+	/**
+	 * Gets a random segment of this MIDIFile.
+	 * 
+	 * @param duration the duration of the segment
+	 * @return a random segment of this MIDIFile
+	 */
+	public MIDIFile getRandomSegment(int duration) {
+		int tempo = 120;
+		ArrayList<Measure> measures = new ArrayList<Measure>();
+		MIDIFile output = new MIDIFile();
+		ArrayList<MusicTrack> tracks = getTracks();
+		int res = getResolution();
+		ArrayList<MIDIEvent> events = tracks.get(0).getEvents();
+		ArrayList<MIDIEvent> cur = new ArrayList<MIDIEvent>();
+		output.setResolution(res);
+		long measureStart = 0;
+		long maxDur = res * 4 - 1;
+		long curStart = -1;
+		byte[] instruments = new byte[tracks.size()];
+		for(int j = 0; j < events.size(); j++) {
+			MIDIEvent event = events.get(j);
+			if(event.getStatus() == (byte) 0x90 && event.getData()[1] != 0) {
+				if(event.getTimeStamp() > measureStart + res * 4) {
+					ArrayList<MIDIEvent> toAdd = new ArrayList<MIDIEvent>();
+					for(int k = 0; k < cur.size(); k++) {
+						toAdd.add(cur.get(k));
+					}
+					measures.add(new Measure(toAdd, false));
+					measureStart += maxDur + 1;
+					j--;
+					continue;
+				}
+				// Duration stuff
+				curStart = event.getTimeStamp();
+				event.setTimeStamp(curStart - measureStart);
+				cur.add(event);
+			} else if(curStart != -1 && (event.getStatus() == (byte) 0x90 && event.getData()[1] == 0) || event.getStatus() == (byte) 0x80) {
+				long noteDur = event.getTimeStamp() - curStart;
+				if(noteDur == 455 || noteDur == 479)
+					noteDur = 479;
+				else if(noteDur == 227 || noteDur == 239)
+					noteDur = 239;
+				else if(noteDur == 113 || noteDur == 119)
+					noteDur = 119;
+				long dur = curStart + noteDur - measureStart;
+				event.setTimeStamp(curStart + noteDur - measureStart);
+				curStart = -1;
+				cur.add(event);
+				if(dur >= maxDur || maxDur - dur < 1.0 / 32 * res) {
+					boolean tie = false;
+					if(dur > maxDur) {
+						cur.remove(cur.size() - 1);
+						cur.add(new MIDIEvent(maxDur, (byte) 0x90, new byte[] { events.get(j - 1).getData()[0], (byte) 0x00 }));
+						tie = true;
+					}
+					ArrayList<MIDIEvent> toAdd = new ArrayList<MIDIEvent>();
+					for(int k = 0; k < cur.size(); k++) {
+						toAdd.add(cur.get(k));
+					}
+					measures.add(new Measure(toAdd, tie));
+					cur.clear();
+					if(tie) {
+						cur.add(new MIDIEvent(0, (byte) 0x90, events.get(j - 1).getData()));
+						cur.add(new MIDIEvent(dur - maxDur, (byte) 0x90, event.getData()));
+					}
+					measureStart += maxDur + 1;
+				}
+			} else if(event.getStatus() == (byte) 0xFF && event.getData()[0] == 0x51) {
+				byte[] data = event.getData();
+				tempo = (int) (0.00006 * new BigInteger(new byte[] { data[2], data[3], data[4] }).intValue());
+			} else if(event.getStatus() == (byte) 0xC0) {
+				instruments[0] = event.getData()[0];
+			}
+		}
+		ArrayList<MIDIEvent> toAdd1 = new ArrayList<MIDIEvent>();
+		for(int k = 0; k < cur.size(); k++) {
+			toAdd1.add(cur.get(k));
+		}
+		measures.add(new Measure(toAdd1, false));
+		
+		for(int i = 1; i < tracks.size(); i++) {
+			cur.clear();
+			measureStart = 0;
+			ArrayList<MIDIEvent> supportEvents = tracks.get(i).getEvents();
+			curStart = -1;
+			int mCount = 0;
+			for(int j = 0; j < supportEvents.size(); j++) {
+				MIDIEvent event = supportEvents.get(j);
+				int status = Byte.toUnsignedInt(event.getStatus());
+				if(status / 16 == 0x9 && event.getData()[1] != 0) {
+					if(event.getTimeStamp() > measureStart + res * 4 - 1) {
+						toAdd1.clear();
+						for(int k = 0; k < cur.size(); k++) {
+							toAdd1.add(cur.get(k));
+						}
+						measures.get(mCount).addSupport(toAdd1);
+						mCount++;
+						measureStart += maxDur + 1;
+						j--;
+						continue;
+					}
+					curStart = event.getTimeStamp();
+					event.setTimeStamp(curStart - measureStart);
+					cur.add(event);
+				} else if(curStart != -1 && (status / 16 == 0x9 && event.getData()[1] == 0) || event.getStatus() == (byte) 0x80) {
+					long noteDur = event.getTimeStamp() - curStart;
+					if(noteDur == 455 || noteDur == 479)
+						noteDur = 479;
+					else if(noteDur == 227 || noteDur == 239)
+						noteDur = 239;
+					else if(noteDur == 113 || noteDur == 119)
+						noteDur = 119;
+					long dur = curStart + noteDur - measureStart;
+					event.setTimeStamp(curStart + noteDur - measureStart);
+					curStart = -1;
+					cur.add(event);
+					if(dur >= maxDur || maxDur - dur < 1.0 / 32 * res) {
+						boolean tie = false;
+						if(dur > maxDur) {
+							cur.remove(cur.size() - 1);
+							cur.add(new MIDIEvent(maxDur, (byte) (0x9 * 16 + j + 1), new byte[] { supportEvents.get(j - 1).getData()[0], (byte) 0x00 }));
+							tie = true;
+						}
+						ArrayList<MIDIEvent> toAdd = new ArrayList<MIDIEvent>();
+						for(int k = 0; k < cur.size(); k++) {
+							toAdd.add(cur.get(k));
+						}
+						measures.get(mCount).addSupport(toAdd);
+						mCount++;
+						cur.clear();
+						if(tie) {
+							cur.add(new MIDIEvent(0, (byte) (0x9 * 16 + j + 1), supportEvents.get(j - 1).getData()));
+							cur.add(new MIDIEvent(dur - maxDur, (byte) (0x9 * 16 + j + 1), event.getData()));
+						}
+						measureStart += maxDur + 1;
+					}
+				} else if(status / 16 == 0xC) {
+					instruments[i] = event.getData()[0];
+				}
+			}
+			toAdd1.clear();
+			for(int k = 0; k < cur.size(); k++) {
+				toAdd1.add(cur.get(k));
+			}
+			measures.get(mCount).addSupport(toAdd1);
+		}
+		
+		int start = (int) (Math.random() * (measures.size() - duration - 1));
+		MusicTrack[] outTracks = new MusicTrack[tracks.size()];
+		for(int i = 0; i < outTracks.length; i++) {
+			outTracks[i] = new MusicTrack();
+		}
+		outTracks[0].addEvent(TimeSignature.construct(0, (byte) 4, (byte) 4));
+		outTracks[0].addEvent(Tempo.construct(0, tempo));
+		for(int i = 0; i < outTracks.length; i++) {
+			outTracks[i].changeInstrument(0, i, instruments[i]);
+		}
+		for(int i = 0; i < duration; i++) {
+			int pos = i * res * 4;
+			ArrayList<MIDIEvent> outEvents = measures.get(i + start).getEvents();
+			for(int j = 0; j < outEvents.size(); j++) {
+				MIDIEvent event = outEvents.get(j);
+				event.setTimeStamp(pos + event.getTimeStamp());
+				outTracks[0].addEvent(event);
+			}
+			ArrayList<ArrayList<MIDIEvent>> supports = measures.get(i + start).getSupport();
+			for(int j = 0; j < supports.size(); j++) {
+				ArrayList<MIDIEvent> supEvents = supports.get(j);
+				for(int k = 0; k < supEvents.size(); k++) {
+					MIDIEvent event = supEvents.get(k);
+					event.setTimeStamp(event.getTimeStamp() + pos);
+					outTracks[j + 1].addEvent(event);
+				}
+			}
+		}
+		for(int i = 0; i < outTracks.length; i++) {
+			output.addTrack(outTracks[i]);
+		}
+		return output;
 	}
 	
 	/**
