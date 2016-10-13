@@ -20,7 +20,7 @@ import cox5529.midi.track.MusicTrack;
  * Class used to store a MIDI file or song.
  * 
  * @author Brandon Cox
- * 		
+ * 
  */
 public class MIDIFile {
 	
@@ -105,6 +105,8 @@ public class MIDIFile {
 		long maxDur = res * 4 - 1;
 		long curStart = -1;
 		byte[] instruments = new byte[tracks.size()];
+		long[] volTotal = new long[tracks.size()];
+		long[] noteCount = new long[tracks.size()];
 		for(int j = 0; j < events.size(); j++) {
 			MIDIEvent event = events.get(j);
 			if(event.getStatus() == (byte) 0x90 && event.getData()[1] != 0) {
@@ -118,6 +120,8 @@ public class MIDIFile {
 					j--;
 					continue;
 				}
+				volTotal[0] += event.getData()[1];
+				noteCount[0]++;
 				// Duration stuff
 				curStart = event.getTimeStamp();
 				event.setTimeStamp(curStart - measureStart);
@@ -187,6 +191,8 @@ public class MIDIFile {
 						j--;
 						continue;
 					}
+					volTotal[i] += event.getData()[1];
+					noteCount[i]++;
 					curStart = event.getTimeStamp();
 					event.setTimeStamp(curStart - measureStart);
 					cur.add(event);
@@ -230,7 +236,13 @@ public class MIDIFile {
 			for(int k = 0; k < cur.size(); k++) {
 				toAdd1.add(cur.get(k));
 			}
-			measures.get(mCount).addSupport(toAdd1);
+			if(measures.size() > mCount)
+				measures.get(mCount).addSupport(toAdd1);
+		}
+		
+		byte[] volAve = new byte[volTotal.length];
+		for(int i = 0; i < volTotal.length; i++) {
+			volAve[i] = (byte) (volTotal[i] / noteCount[i]);
 		}
 		
 		int start = (int) (Math.random() * (measures.size() - duration - 1));
@@ -249,6 +261,7 @@ public class MIDIFile {
 			for(int j = 0; j < outEvents.size(); j++) {
 				MIDIEvent event = outEvents.get(j);
 				event.setTimeStamp(pos + event.getTimeStamp());
+				event.setData(new byte[] { event.getData()[0], (event.getData()[1] == 0 ? 0: volAve[0]) });
 				outTracks[0].addEvent(event);
 			}
 			ArrayList<ArrayList<MIDIEvent>> supports = measures.get(i + start).getSupport();
@@ -257,6 +270,7 @@ public class MIDIFile {
 				for(int k = 0; k < supEvents.size(); k++) {
 					MIDIEvent event = supEvents.get(k);
 					event.setTimeStamp(event.getTimeStamp() + pos);
+					event.setData(new byte[] { event.getData()[0], (event.getData()[1] == 0 ? 0: volAve[j + 1]) });
 					outTracks[j + 1].addEvent(event);
 				}
 			}

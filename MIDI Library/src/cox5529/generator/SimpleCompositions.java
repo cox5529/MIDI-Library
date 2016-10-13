@@ -17,7 +17,7 @@ import cox5529.midi.track.MusicTrack;
  * Class that contains basic methods of algorithmic composition.
  * 
  * @author Brandon Cox
- * 		
+ * 
  */
 public class SimpleCompositions {
 	
@@ -382,7 +382,7 @@ public class SimpleCompositions {
 						isMajor = false;
 				} else if(event.getStatus() == (byte) 0xFF && event.getData()[0] == 0x51) {
 					byte[] data = event.getData();
-					tempo = (int) (0.00006 * new BigInteger(new byte[] { data[2], data[3], data[4] }).intValue());
+					tempo = (int) (0.00012 * new BigInteger(new byte[] { data[2], data[3], data[4] }).intValue());
 				} else if(event.getStatus() == (byte) 0xC0) {
 					instruments[0] = event.getData()[0];
 				}
@@ -408,7 +408,8 @@ public class SimpleCompositions {
 							for(int k = 0; k < cur.size(); k++) {
 								toAdd1.add(cur.get(k));
 							}
-							measures.get(mCount).addSupport(toAdd1);
+						if(mCount < measures.size())
+								measures.get(mCount).addSupport(toAdd1);
 							mCount++;
 							measureStart += maxDur + 1;
 							j--;
@@ -444,7 +445,8 @@ public class SimpleCompositions {
 							for(int k = 0; k < cur.size(); k++) {
 								toAdd.add(cur.get(k));
 							}
-							measures.get(mCount).addSupport(toAdd);
+							if(mCount < measures.size())
+								measures.get(mCount).addSupport(toAdd);
 							mCount++;
 							cur.clear();
 							if(tie) {
@@ -461,7 +463,8 @@ public class SimpleCompositions {
 				for(int k = 0; k < cur.size(); k++) {
 					toAdd1.add(cur.get(k));
 				}
-				measures.get(mCount).addSupport(toAdd1);
+				if(mCount < measures.size())
+					measures.get(mCount).addSupport(toAdd1);
 				mCount = prevMeasureSize;
 			}
 			prevMeasureSize = measures.size();
@@ -615,7 +618,7 @@ public class SimpleCompositions {
 		output.addTrack(newTrack);
 		for(int i = 0; i < supportTracks.length; i++)
 			output.addTrack(supportTracks[i]);
-			
+		
 		return output;
 	}
 }
