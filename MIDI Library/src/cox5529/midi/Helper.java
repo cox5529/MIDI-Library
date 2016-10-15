@@ -1,5 +1,10 @@
 package cox5529.midi;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
 /**
  * Various helper methods.
  * 
@@ -125,14 +130,45 @@ public class Helper {
 	}
 	
 	/**
-	 * Generates an array of bytes that will represent the pitches of a specified chord.
+	 * Determines the chord within the array of pitches given.
 	 * 
-	 * @param sharps the number of sharps in the key, or number of flats * -1
-	 * @param isMajor true if major, false if minor
-	 * @param low the base note of the chord
-	 * @return the array of bytes representing the chord or an empty array if no chord will meet the requirements of the key.
+	 * @param sharps the number of sharps in the key signature
+	 * @param isMajor true if the key is major
+	 * @param notes array of pitches
+	 * @return ordered array of pitches that represents a chord
 	 */
-	public static byte[] getChord(int sharps, boolean isMajor, byte low) {
+	public static byte[] getChord(int sharps, boolean isMajor, byte[] notes) {
+		int b = getBase(sharps, isMajor);
+		int low = 100;
+		for(int i = 0; i < notes.length; i++) {
+			while(notes[i] >= 12 + b) {
+				notes[i] -= 12;
+			}
+			if(notes[i] < low)
+				low = notes[i];
+		}
+		for(int i = 0; i < notes.length; i++) {
+			for(int j = 0; j < notes.length; j++) {
+				if(i != j && notes[i] == notes[j]) {
+					Set<Byte> n = new HashSet<Byte>();
+					for(int k = 0; k < notes.length; k++)
+						n.add(notes[k]);
+					Iterator<Byte> it = n.iterator();
+					int index = 0;
+					byte[] no = new byte[n.size()];
+					while(it.hasNext()) {
+						no[index] = it.next();
+						index++;
+					}
+					notes = no;
+				}
+			}
+		}
+		Arrays.sort(notes);
+		return notes;
+	}
+	
+	private static byte getBase(int sharps, boolean isMajor) {
 		byte base = 6;
 		if(sharps == 0)
 			if(isMajor)
@@ -210,56 +246,7 @@ public class Helper {
 			else
 				base = 12;
 		base -= 6;
-		int b = base;
-		while(b <= low - 12)
-			b += 12;
-		int offset = b - base;
-		byte[] key = new byte[7];
-		if(isMajor) {
-			key[0] = base;
-			key[1] = (byte) (key[0] + 2);
-			key[2] = (byte) (key[1] + 2);
-			key[3] = (byte) (key[2] + 1);
-			key[4] = (byte) (key[3] + 2);
-			key[5] = (byte) (key[4] + 2);
-			key[6] = (byte) (key[5] + 2);
-		} else {
-			key[0] = base;
-			key[1] = (byte) (key[0] + 2);
-			key[2] = (byte) (key[1] + 1);
-			key[3] = (byte) (key[2] + 2);
-			key[4] = (byte) (key[3] + 2);
-			key[5] = (byte) (key[4] + 1);
-			key[6] = (byte) (key[5] + 2);
-		}
-		int deg = 0;
-		for(int i = 0; i < key.length; i++) {
-			key[i] += offset;
-			if(key[i] == low) {
-				deg = i + 1;
-				break;
-			}
-		}
-		if((deg == 1 || deg == 4 || deg == 5) && !isMajor)
-			if(deg == 1 || deg == 5)
-				deg++;
-			else if(deg == 4)
-				deg--;
-		if((deg == 2 || deg == 3 || deg == 6) && isMajor) {
-			if(deg == 2 || deg == 6)
-				deg--;
-			else if(deg == 3)
-				deg++;
-		}
-		if((deg == 1 || deg == 4 || deg == 5) && isMajor) {
-			return new byte[] { low, (byte) (low + 4), (byte) (low + 7) };
-		} else if((deg == 2 || deg == 3 || deg == 6) && !isMajor) {
-			return new byte[] { low, (byte) (low + 3), (byte) (low + 7) };
-		} else if(deg == 7)
-			return new byte[] { low, (byte) (low + 3), (byte) (low + 6) };
-		else {
-			return new byte[] {};
-		}
+		return base;
 	}
 	
 	/**
@@ -392,6 +379,49 @@ public class Helper {
 			return 0x00 << 24 | 0x00 << 16 | (b[0] & 0xff) << 8 | (b[1] & 0xff);
 			
 		return 0;
+	}
+	
+	/**
+	 * Transposes the given pitch down to the lowest octaves that contains all notes in the key.
+	 * 
+	 * @param sharps the number of sharps in the key, negative for flats
+	 * @param isMajor true if the key is major
+	 * @param pitch the pitch to transpose
+	 * @return the transposed pitch
+	 */
+	public static byte getLowestOctave(int sharps, boolean isMajor, byte pitch) {
+		byte base = getBase(sharps, isMajor);
+		while(pitch >= 12 + base)
+			pitch -= 12;
+		return pitch;
+	}
+	
+	/**
+	 * Increases a given pitch to be greater than a pitch. Increments by octave.
+	 * 
+	 * @param pitch the pitch to raise.
+	 * @param octave the value to bring the pitch above
+	 * @return the increased pitch
+	 */
+	public static byte increaseToAverageOctave(byte pitch, byte octave) {
+		while(pitch < octave)
+			pitch += 12;
+		return pitch;
+	}
+	
+	/**
+	 * Gets the index of an element in an array of bytes.
+	 * 
+	 * @param arr the array to search
+	 * @param elem the byte to search for
+	 * @return the index of the element, or -1 if the array does not contain the element
+	 */
+	public static int getIndex(byte[] arr, byte elem) {
+		for(int i = 0; i < arr.length; i++) {
+			if(arr[i] == elem)
+				return i;
+		}
+		return -1;
 	}
 	
 }

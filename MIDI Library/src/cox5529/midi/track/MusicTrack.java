@@ -83,6 +83,15 @@ public class MusicTrack {
 	}
 	
 	/**
+	 * Deletes all of the current events and replaces them with the given ArrayList of MIDIEvents.
+	 * 
+	 * @param events the ArrayList of MIDIEvents to replace the current event list with.
+	 */
+	public void setEvents(ArrayList<MIDIEvent> events) {
+		this.events = events;
+	}
+	
+	/**
 	 * Removes the last event in the events ArrayList.
 	 * 
 	 * @return the last event in the events ArrayList that was just removed.
@@ -176,5 +185,14 @@ public class MusicTrack {
 			i += size;
 		}
 		return new MusicTrack(events);
+	}
+	
+	public String toString() {
+		Collections.sort(events);
+		String re = "";
+		for(int i = 0; i < events.size(); i++) {
+			re += events.get(i) + "\n";
+		}
+		return re;
 	}
 }
