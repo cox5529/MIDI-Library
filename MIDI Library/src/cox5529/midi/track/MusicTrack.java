@@ -45,6 +45,17 @@ public class MusicTrack {
 	}
 	
 	/**
+	 * Adds all events in the given ArrayList to this track
+	 * 
+	 * @param events the ArrayList of MIDIEvents to add
+	 */
+	public void addAllEvents(ArrayList<MIDIEvent> events) {
+		for(int i = 0; i < events.size(); i++) {
+			addEvent(events.get(i));
+		}
+	}
+	
+	/**
 	 * Adds a note to this MusicTrack
 	 * 
 	 * @param time the timestamp at which the note begins
@@ -187,6 +198,11 @@ public class MusicTrack {
 		return new MusicTrack(events);
 	}
 	
+	/**
+	 * Gets the String representation of this track
+	 * 
+	 * @return the String representation of this track
+	 */
 	public String toString() {
 		Collections.sort(events);
 		String re = "";

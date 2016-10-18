@@ -3,6 +3,7 @@
  */
 package cox5529.generator.storage;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -67,23 +68,29 @@ public class Note implements Comparable<Note> {
 	/**
 	 * Gets the pitch that will follow this note.
 	 * 
+	 * @param ignore ArrayList of pitches to ignore
 	 * @return the pitch that will follow this note.
 	 */
-	public byte getFollowPitch() {
+	public byte getFollowPitch(ArrayList<Byte> ignore) {
+		if(ignore == null)
+			ignore = new ArrayList<Byte>();
 		Iterator<Entry<Byte, Integer>> it = follow.entrySet().iterator();
 		int total = 0;
 		while(it.hasNext()) {
 			Map.Entry<Byte, Integer> pair = (Map.Entry<Byte, Integer>) it.next();
-			total += pair.getValue();
+			if(!ignore.contains(pair.getKey()))
+				total += pair.getValue();
 		}
 		it = follow.entrySet().iterator();
 		double rand = Math.random();
 		int counted = 0;
 		while(it.hasNext()) {
 			Map.Entry<Byte, Integer> pair = (Map.Entry<Byte, Integer>) it.next();
-			counted += pair.getValue();
-			if(rand < (counted + 0.0) / total) {
-				return pair.getKey();
+			if(!ignore.contains(pair.getKey())) {
+				counted += pair.getValue();
+				if(rand < (counted + 0.0) / total) {
+					return pair.getKey();
+				}
 			}
 		}
 		return -1;

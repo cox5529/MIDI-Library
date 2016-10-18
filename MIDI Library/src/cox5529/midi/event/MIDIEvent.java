@@ -104,6 +104,10 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * @return the data bytes of this MIDIEvent
 	 */
 	public byte[] getData() {
+		byte[] data = new byte[this.data.length];
+		for(int i = 0; i < data.length; i++) {
+			data[i] = this.data[i];
+		}
 		return data;
 	}
 	
@@ -138,7 +142,7 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * @return the String representation of this MIDIEvent
 	 */
 	public String toString() {
-		String re = String.format("%02x ", status);
+		String re = timeStamp + String.format("%02x ", status);
 		for(int i = 0; i < data.length; i++) {
 			re += String.format("%02X", data[i]) + (i == data.length - 1 ? "": " ");
 		}
@@ -205,10 +209,10 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 			end += 2;
 		else
 			end += 3;
-		//if(unsigStatus / 0x10 != 0xB)
-			return new MIDIEvent(dtime + prevTime, status, Arrays.copyOfRange(in, start, end));
-		//else
-			//return new MIDIEvent(0, (byte) 0xFF, new byte[] { 0x2F, 0x00 });
+		// if(unsigStatus / 0x10 != 0xB)
+		return new MIDIEvent(dtime + prevTime, status, Arrays.copyOfRange(in, start, end));
+		// else
+		// return new MIDIEvent(0, (byte) 0xFF, new byte[] { 0x2F, 0x00 });
 	}
 	
 }
