@@ -18,7 +18,7 @@ public class Main {
 	 * @param args unused
 	 */
 	public static void main(String[] args) {
-		String src = "Drei_Equali no 1- Bach.mid";
+		String src = "odeToJoy.mid";
 		int duration = 10;
 		int x = 2;
 		int y = 4;
@@ -26,7 +26,8 @@ public class Main {
 		System.out.println(src);
 		try {
 			MIDIFile source = MIDIFile.read(new File(src), false);
-			SimpleCompositions.fullCompose(duration, x, y, z, source).write(new File("out.mid"), false);
+			SimpleCompositions sc = new SimpleCompositions(duration, x, y, z, source);
+			//sc.generateSong().write(new File("out.mid"), false);
 		} catch(IOException e) {
 			e.printStackTrace();
 		}

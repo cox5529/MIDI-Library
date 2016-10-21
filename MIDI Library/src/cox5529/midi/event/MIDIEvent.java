@@ -142,7 +142,7 @@ public class MIDIEvent implements Comparable<MIDIEvent> {
 	 * @return the String representation of this MIDIEvent
 	 */
 	public String toString() {
-		String re = timeStamp + String.format("%02x ", status);
+		String re = timeStamp + String.format(" %02x ", status);
 		for(int i = 0; i < data.length; i++) {
 			re += String.format("%02X", data[i]) + (i == data.length - 1 ? "": " ");
 		}

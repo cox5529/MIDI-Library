@@ -3,150 +3,171 @@
  */
 package cox5529.generator.storage;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-
 /**
+ * Object used to store notes
+ * 
  * @author Brandon Cox
  * 		
  */
 public class Note implements Comparable<Note> {
 	
-	private HashMap<Byte, Integer> follow; // pitch that follows this note, frequency
-	private byte[] precede;
+	private long start;
+	private long stop;
+	
+	private byte pitch;
 	
 	/**
-	 * Constructs a note object
+	 * Constructs a new Note object.
 	 * 
-	 * @param precede the notes that precede the note that will be generated
-	 * @param next the note that follows this set
+	 * @param start the time at which the note begins
+	 * @param stop the time at which the note ends
+	 * @param pitch the pitch of the Note
 	 */
-	public Note(byte[] precede, byte next) {
-		this.follow = new HashMap<Byte, Integer>();
-		follow.put(next, 1);
-		this.precede = precede;
+	public Note(long start, long stop, byte pitch) {
+		this.start = start;
+		this.stop = stop;
+		this.pitch = pitch;
 	}
 	
 	/**
-	 * Adds a pitch to this Note's data
+	 * Determines if a given time occurs within the times in which this note is playing
 	 * 
-	 * @param p the pitch to add
+	 * @param time the time to test
+	 * @return true if this note is playing at the given time
 	 */
-	public void addPitch(Byte p) {
-		boolean cont = false;
-		Iterator<Byte> it = follow.keySet().iterator();
-		while(it.hasNext()) {
-			Byte key = it.next();
-			if(key == p) {
-				cont = true;
-				break;
-			}
-		}
-		if(cont) {
-			follow.replace(p, follow.get(p) + 1);
-		} else {
-			follow.put(p, 1);
-		}
+	public boolean isDuring(long time) {
+		return (time >= start) && (time <= stop);
 	}
 	
 	/**
-	 * Returns the precede array for this object
+	 * Gets the duration of this note
 	 * 
-	 * @return the precede array for this object
+	 * @return the duration of this note in MIDI clocks
 	 */
-	public byte[] getPrecede() {
-		byte[] re = new byte[precede.length];
-		for(int i = 0; i < re.length; i++) {
-			re[i] = precede[i];
-		}
-		return re;
+	public long getDuration() {
+		return stop - start;
 	}
 	
 	/**
-	 * Gets the pitch that will follow this note.
+	 * Sets the duration of the note while keeping the start time of the note the same
 	 * 
-	 * @param ignore ArrayList of pitches to ignore
-	 * @return the pitch that will follow this note.
+	 * @param dur the new duration of the note
 	 */
-	public byte getFollowPitch(ArrayList<Byte> ignore) {
-		if(ignore == null)
-			ignore = new ArrayList<Byte>();
-		Iterator<Entry<Byte, Integer>> it = follow.entrySet().iterator();
-		int total = 0;
-		while(it.hasNext()) {
-			Map.Entry<Byte, Integer> pair = (Map.Entry<Byte, Integer>) it.next();
-			if(!ignore.contains(pair.getKey()))
-				total += pair.getValue();
-		}
-		it = follow.entrySet().iterator();
-		double rand = Math.random();
-		int counted = 0;
-		while(it.hasNext()) {
-			Map.Entry<Byte, Integer> pair = (Map.Entry<Byte, Integer>) it.next();
-			if(!ignore.contains(pair.getKey())) {
-				counted += pair.getValue();
-				if(rand < (counted + 0.0) / total) {
-					return pair.getKey();
-				}
-			}
-		}
-		return -1;
+	public void setDuration(long dur) {
+		this.stop = start + dur;
 	}
 	
 	/**
-	 * Determines if this Note object is equal to another.
+	 * Gets the start timestamp of the note
 	 * 
-	 * @param n the Note object to compare this object to
-	 * @return true if they are the same
+	 * @return the start timestamp of the note
 	 */
-	public boolean equals(Note n) {
-		byte[] nPrecede = n.getPrecede();
-		for(int i = 0; i < nPrecede.length; i++) {
-			if(nPrecede[i] != precede[i]) {
-				return false;
-			}
-		}
-		return true;
+	public long getStart() {
+		return start;
 	}
 	
 	/**
-	 * Gets the String representation of this Note object.
+	 * Sets the start timestamp of the note
 	 * 
-	 * @return the String representation of this Note object.
+	 * @param start the new start timestamp of the note
+	 */
+	public void setStart(long start) {
+		this.start = start;
+	}
+	
+	/**
+	 * Gets the stop timestamp of the note
+	 * 
+	 * @return the stop timestamp of the note
+	 */
+	public long getStop() {
+		return stop;
+	}
+	
+	/**
+	 * Sets the stop timestamp of the note
+	 * 
+	 * @param stop the new stop timestamp of the note
+	 */
+	public void setStop(long stop) {
+		this.stop = stop;
+	}
+	
+	/**
+	 * Gets the pitch of the note.
+	 * 
+	 * @return the pitch of the note, -127 if rest
+	 */
+	public byte getPitch() {
+		return pitch;
+	}
+	
+	/**
+	 * Sets the pitch of the note.
+	 * 
+	 * @param pitch the pitch of the note, -127 if rest
+	 */
+	public void setPitch(byte pitch) {
+		this.pitch = pitch;
+	}
+	
+	/**
+	 * Determines if this note is a rest
+	 * 
+	 * @return true if the note is a rest
+	 */
+	public boolean isRest() {
+		return pitch == -127;
+	}
+	
+	/**
+	 * Gets the number of beats since the beginning of the song for this note
+	 * 
+	 * @param res the resolution of this note
+	 * @return the number of beats since the beginning of the song
+	 */
+	public int getAbsoluteBeatNumber(int res) {
+		return (int) (getBeatNumber(res) + getMeasureNumber(res) * 4);
+	}
+	
+	/**
+	 * Gets the measure number in which this note begins. Assumes 4/4 time.
+	 * 
+	 * @param res the resolution of the note
+	 * @return the measure number in which this note begins
+	 */
+	public int getMeasureNumber(int res) {
+		return (int) (start / (4 * res));
+	}
+	
+	/**
+	 * Gets the beat number on which this note begins
+	 * 
+	 * @param res the resolution of the note
+	 * @return the beat number on which this note begins
+	 */
+	public double getBeatNumber(int res) {
+		int measure = getMeasureNumber(res);
+		int mStart = measure * res * 4;
+		return (double) ((start - mStart + 0.0) / res) + 1;
+	}
+	
+	/**
+	 * Gets the String representation of this note
+	 * 
+	 * @return the String representation of this note
 	 */
 	public String toString() {
-		String re = "Precede: ";
-		for(int i = 0; i < precede.length; i++) {
-			re += precede[i] + " ";
-		}
-		re += "\n";
-		re += "Size: " + follow.size() + "\n";
-		re += "Contents: ";
-		Iterator<Entry<Byte, Integer>> it = follow.entrySet().iterator();
-		while(it.hasNext()) {
-			Entry<Byte, Integer> pair = (Entry<Byte, Integer>) it.next();
-			re += pair.getKey() + "x" + pair.getValue() + " ";
-		}
-		return re + "\n";
+		return String.format("Start: %d\tStop: %d\tPitch: %d", start, stop, pitch);
 	}
 	
-	/**
-	 * Compares this Note to another.
-	 * 
-	 * @param n the note to compare this one to
-	 * @return -1 if this Note should be sorted before the given one, 1 if after, or 0 if together.
-	 */
 	@Override public int compareTo(Note n) {
-		byte[] nPre = n.getPrecede();
-		for(int i = 0; i < precede.length; i++) {
-			if(nPre[i] > precede[i])
-				return -1;
-			else if(nPre[i] < precede[i])
-				return 1;
-		}
+		long s = n.getStart();
+		if(s > start)
+			return -1;
+		else if(s < start)
+			return 1;
 		return 0;
 	}
+	
 }

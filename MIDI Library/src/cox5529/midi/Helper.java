@@ -168,7 +168,14 @@ public class Helper {
 		return notes;
 	}
 	
-	private static byte getBase(int sharps, boolean isMajor) {
+	/**
+	 * Gets the index of the lowest possible pitch that could serve as the base pitch of the chord
+	 * 
+	 * @param sharps the number of sharps in the key signature, negative if flats
+	 * @param isMajor true if the key is major
+	 * @return the index of the lowest possible pitch
+	 */
+	public static byte getBase(int sharps, boolean isMajor) {
 		byte base = 6;
 		if(sharps == 0)
 			if(isMajor)
