@@ -170,4 +170,12 @@ public class Note implements Comparable<Note> {
 		return 0;
 	}
 	
+	@Override public boolean equals(Object o) {
+		if(o instanceof Note) {
+			Note n = (Note) o;
+			return(n.getDuration() == getDuration() && n.getPitch() == getPitch());
+		} else
+			return false;
+	}
+	
 }

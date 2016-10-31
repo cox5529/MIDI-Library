@@ -3,9 +3,9 @@ package cox5529.generator;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 import javax.imageio.ImageIO;
@@ -13,6 +13,7 @@ import javax.imageio.ImageIO;
 import cox5529.generator.storage.Measure;
 import cox5529.generator.storage.Note;
 import cox5529.generator.storage.Phrase;
+import cox5529.generator.storage.PhraseTree;
 import cox5529.generator.storage.Pitch;
 import cox5529.midi.Helper;
 import cox5529.midi.MIDIFile;
@@ -20,6 +21,9 @@ import cox5529.midi.event.MIDIEvent;
 import cox5529.midi.event.Tempo;
 import cox5529.midi.event.TimeSignature;
 import cox5529.midi.track.MusicTrack;
+import ij.ImagePlus;
+import ij.io.FileSaver;
+import ij.process.ColorProcessor;
 
 /**
  * Class that contains basic methods of algorithmic composition.
@@ -71,6 +75,7 @@ public class SimpleCompositions {
 		notes = new ArrayList<Note>();
 		chordList = new ArrayList<ArrayList<byte[]>>();
 		phrases = new ArrayList<Phrase>();
+		measures = new ArrayList<Measure>();
 		noteSum = null;
 		noteTotal = null;
 		volTotal = null;
@@ -267,6 +272,7 @@ public class SimpleCompositions {
 				mCount = prevMeasureSize;
 			}
 			prevMeasureSize = measures.size();
+			this.measures.addAll(measures);
 			
 			/*
 			 * ArrayList<byte[]> chords = new ArrayList<byte[]>(); for(int i = 0; i < measures.size(); i++) { byte[][] c = measures.get(i).getChords(sharps, isMajor); for(int j = 0; j < c.length; j++) { chords.add(c[j]); } } chordList.add(chords);
@@ -281,7 +287,9 @@ public class SimpleCompositions {
 			}
 			Collections.sort(notes);
 			
-			findPhrases();
+			ArrayList<Note> nTemp = new ArrayList<Note>(notes);
+			phrases = findPhrasesMeasure();
+			
 		}
 		Collections.sort(pitches);
 		
@@ -294,26 +302,145 @@ public class SimpleCompositions {
 		}
 	}
 	
-	private void findPhrases() {
+	private ArrayList<Phrase> findPhrasesMeasure() {
+		ArrayList<Phrase> phrases = new ArrayList<Phrase>();
+		int curId = 100;
+		for(int i = 0; i < measures.size(); i++) {
+			Measure m = measures.get(i);
+			if(m.getNotes().size() > 1) {
+				int id = m.getPhrase(phrases);
+				if(id == -1) {
+					phrases.add(new Phrase(m.getNotes(), m.getSupportNotes(), curId));
+					curId += 100;
+				} else {
+					phrases.add(new Phrase(m.getNotes(), m.getSupportNotes(), id));
+				}
+			}
+		}
+		
+		phrases = combinePhrases(phrases, curId);
+		int maxId = 0;
+		for(int i = 0; i < phrases.size(); i++) {
+			int id = phrases.get(i).getId();
+			if(id > maxId)
+				maxId = id;
+		}
+		phrases = simplifyPhrases(phrases, 100 * (maxId / 100) + 100);
+		
+		return phrases;
+	}
+	
+	private ArrayList<Phrase> simplifyPhrases(ArrayList<Phrase> phrases, int curId) {
+		// combine non repeated phrases
+		for(int size = phrases.size() - 1; size > 1; size--) {
+			for(int i = 0; i < phrases.size() - size; i++) {
+				boolean good = true;
+				double avgDur = phrases.get(i).getAverageDuration();
+				for(int j = i; j < i + size; j++) {
+					Phrase p = phrases.get(j);
+					if(p instanceof PhraseTree || p.getAverageDuration() > 1.25 * avgDur || p.getAverageDuration() < 0.75 * avgDur) {
+						good = false;
+						break;
+					}
+				}
+				if(good) {
+					PhraseTree pt = PhraseTree.construct(phrases.remove(i), phrases.remove(i), curId);
+					phrases.add(i, pt);
+					for(int j = 2; j < size; j++) {
+						pt = (PhraseTree) phrases.remove(i);
+						pt = PhraseTree.construct(pt, phrases.remove(i), curId);
+						phrases.add(i, pt);
+					}
+					curId += 100;
+				}
+			}
+		}
+		return phrases;
+	}
+	
+	private ArrayList<Phrase> combinePhrases(ArrayList<Phrase> phrases, int curId) {
+		for(int i = 0; i < phrases.size() - 1; i++) {
+			int[] window = new int[2];
+			window[0] = phrases.get(i).getId();
+			window[1] = phrases.get(i + 1).getId();
+			boolean match = false;
+			int deriv = 1;
+			for(int j = i + 2; j < phrases.size() - 1; j++) {
+				int[] ids = { phrases.get(j).getId(), phrases.get(j + 1).getId() };
+				if(ids[0] / 100 == window[0] / 100 && ids[1] / 100 == window[1] / 100) {
+					if(!match) {
+						PhraseTree pt = PhraseTree.construct(phrases.remove(i), phrases.remove(i), curId);
+						phrases.add(i, pt);
+					}
+					int dif = (match ? 0: 1);
+					if(ids[0] == window[0] && ids[1] == window[1]) {
+						phrases.add(j - dif, PhraseTree.construct(phrases.remove(j - dif), phrases.remove(j - dif), curId));
+					} else {
+						PhraseTree pt = PhraseTree.construct(phrases.remove(j - dif), phrases.remove(j - dif), curId + deriv);
+						boolean added = false;
+						for(int k = 0; k < phrases.size(); k++) {
+							Phrase p = phrases.get(k);
+							if(pt.getStringId().equals(p.getStringId())) {
+								pt.setId(p.getId());
+								added = true;
+								phrases.add(j - dif, pt);
+								break;
+							}
+						}
+						if(!added) {
+							phrases.add(j - dif, pt);
+							deriv++;
+						}
+					}
+					if(!match)
+						j--;
+					match = true;
+					i--;
+				}
+			}
+			if(match) {
+				curId += 100;
+				return combinePhrases(phrases, curId);
+			}
+		}
+		return phrases;
+	}
+	
+	private ArrayList<Phrase> findPhrasesImages(ArrayList<Note> notes) {
 		// [start index of window][start index of curLoc][length of window][intensity of window]
 		// array of images with axes [start index of window][startIndex of curLoc] = intensity, different image per length
 		long end = notes.get(notes.size() - 1).getStop() + 1;
 		int totalBeats = (int) (end / res) + 1;
-		System.out.println(totalBeats);
 		for(int i = 1; i < 32; i++) { // 32 beats = 8 measures in 4/4 time
 			long dur = res * i;
-			int[][] img = new int[totalBeats - i][totalBeats - i];
+			int[][] data = new int[totalBeats - i][totalBeats - i];
 			for(int j = 0; j < totalBeats - i; j++) { // loop through every possible start index, 1 beat at a time
 				ArrayList<Note> window = getWindow(j * res, dur);
 				for(int k = 0; k < totalBeats - i; k++) { // loop through every possible curLoc, 1 beat at a time
 					if(Math.abs(j - k) >= i) {
 						ArrayList<Note> cur = getWindow(k * res, dur);
-						img[j][k] = getIntensity(window, cur);
+						data[j][k] = getIntensity(window, cur);
 					}
 				}
 			}
-			writeImage(img, i);
+			
+			BufferedImage img = writeImage(data, i);
+			ColorProcessor cp = new ColorProcessor(img);
+			int[][] orig = cp.getIntArray();
+			cp.erode();
+			ImagePlus ip = new ImagePlus(i + "dilate", cp);
+			FileSaver fs = new FileSaver(ip);
+			fs.saveAsPng("Dilated Images\\" + i + "dilate.png");
+			int[][] erode = cp.getIntArray();
+			for(int j = 0; j < orig.length; j++) {
+				for(int k = 0; k < orig[0].length; k++) {
+					if(orig[j][k] == erode[j][k] && orig[j][k] == 255)
+						System.out.printf("Window Start: %d\nLocation Start: %d\nWindow Size: %d\n\n", j, k, i);
+				}
+			}
+			
 		}
+		return null;
 		// find phrases based on images
 		// write a list of all possible phrases greater than a specific length
 	}
@@ -382,9 +509,9 @@ public class SimpleCompositions {
 		return re;
 	}
 	
-	private void writeImage(int[][] data, int name) {
+	private BufferedImage writeImage(int[][] data, int name) {
 		String path = "Phrase Images\\" + name + ".png";
-		BufferedImage img = new BufferedImage(data.length, data[0].length, BufferedImage.TYPE_INT_RGB);
+		BufferedImage img = new BufferedImage(data.length, data[0].length, BufferedImage.TYPE_BYTE_GRAY);
 		for(int x = 0; x < data[0].length; x++) {
 			for(int y = 0; y < data.length; y++) {
 				img.setRGB(x, y, data[y][x] + (data[y][x] << 8) + (data[y][x] << 16));
@@ -397,6 +524,7 @@ public class SimpleCompositions {
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
+		return img;
 	}
 	
 	/**

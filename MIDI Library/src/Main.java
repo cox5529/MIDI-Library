@@ -18,7 +18,7 @@ public class Main {
 	 * @param args unused
 	 */
 	public static void main(String[] args) {
-		String src = "odeToJoy.mid";
+		String src = "pachelbel-s.mid";
 		int duration = 10;
 		int x = 2;
 		int y = 4;
@@ -27,7 +27,7 @@ public class Main {
 		try {
 			MIDIFile source = MIDIFile.read(new File(src), false);
 			SimpleCompositions sc = new SimpleCompositions(duration, x, y, z, source);
-			//sc.generateSong().write(new File("out.mid"), false);
+			// sc.generateSong().write(new File("out.mid"), false);
 		} catch(IOException e) {
 			e.printStackTrace();
 		}

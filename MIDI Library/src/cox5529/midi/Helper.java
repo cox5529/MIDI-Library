@@ -431,4 +431,103 @@ public class Helper {
 		return -1;
 	}
 	
+	/**
+	 * Gets the numeral representation of a chord
+	 * 
+	 * @param chord the chord to convert to numerals
+	 * @param sharps the number of sharps in the key signature, negative if flats
+	 * @param isMajor true if the key is major
+	 * @return the numeral representation of the given chord
+	 */
+	public static String getNumeral(byte[] chord, int sharps, boolean isMajor) {
+		byte base = Helper.getBase(sharps, isMajor);
+		byte[] root = new byte[chord.length];
+		for(int i = 0; i < root.length; i++) {
+			root[i] = (byte) (chord[i] % 12);
+		}
+		Arrays.sort(root);
+		byte min = root[0];
+		for(int i = 0; i < root.length; i++) {
+			root[i] = (byte) (root[i] - min);
+		}
+		String num = "";
+		int b = chord[0] - base;
+		if(isMajor) {
+			if(b == 0)
+				num = "i";
+			else if(b == 2)
+				num = "ii";
+			else if(b == 4)
+				num = "iii";
+			else if(b == 5)
+				num = "iv";
+			else if(b == 7)
+				num = "v";
+			else if(b == 9)
+				num = "vi";
+			else if(b == 10)
+				num = "vii";
+			else
+				num = "i";
+		} else {
+			if(b == 0)
+				num = "i";
+			else if(b == 2)
+				num = "ii";
+			else if(b == 3)
+				num = "iii";
+			else if(b == 5)
+				num = "iv";
+			else if(b == 7)
+				num = "v";
+			else if(b == 8)
+				num = "vi";
+			else if(b == 10)
+				num = "vii";
+			else
+				num = "i";
+		}
+		if(chord.length == 2) {
+			return "D";
+		} else if(chord.length == 3) {
+			if(root[1] == 4) {
+				if(root[2] == 7)
+					return num.toUpperCase(); // major 0-4-7
+				else
+					return num + "+"; // augmented 0-4-8
+			} else {
+				if(root[2] == 7)
+					return num; // minor 0-3-7
+				else
+					return num + "o"; // diminished 0-3-6
+			}
+		} else {
+			
+			if(root[1] == 3) {
+				if(root[2] == 7) {
+					if(root[3] == 10)
+						return num + "7"; // minor seventh 0-3-7-10
+					else if(root[3] == 11)
+						return num + "mM7"; // minor-major seventh 0-3-7-11
+				} else if(root[2] == 6) {
+					if(root[3] == 9)
+						return num + "d7"; // diminished seventh 0-3-6-9
+					else if(root[3] == 10)
+						return num + "o7"; // half-diminished seventh 0-3-6-10
+				}
+			} else if(root[1] == 4) {
+				if(root[2] == 7) {
+					if(root[3] == 10 && num.equals("v"))
+						return "V7D"; // dominant seventh 0-4-7-10
+					else if(root[3] == 11)
+						return num.toUpperCase() + "7"; // major seventh 0-4-7-11
+				} else if(root[2] == 8) {
+					if(root[3] == 11)
+						return num.toUpperCase() + "+7"; // augmented major seventh 0-4-8-11
+				}
+			}
+			return num;
+		}
+	}
+	
 }
