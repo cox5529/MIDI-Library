@@ -3,6 +3,8 @@
  */
 package cox5529.generator.storage;
 
+import cox5529.midi.event.MIDIEvent;
+
 /**
  * Object used to store notes
  * 
@@ -27,6 +29,22 @@ public class Note implements Comparable<Note> {
 		this.start = start;
 		this.stop = stop;
 		this.pitch = pitch;
+	}
+	
+	/**
+	 * Gets the MIDIEvents representing this Note
+	 * 
+	 * @param vol the volume of the MIDIEvents
+	 * @return an array with 2 MIDIEvents, the first being a note_on and the second a note_off
+	 */
+	public MIDIEvent[] toEvents(byte vol) {
+		if(pitch != -1) {
+			MIDIEvent[] re = new MIDIEvent[2];
+			re[0] = new MIDIEvent(start, (byte) 0x90, new byte[] { pitch, vol });
+			re[1] = new MIDIEvent(stop, (byte) 0x90, new byte[] { pitch, 0 });
+			return re;
+		}
+		return null;
 	}
 	
 	/**
@@ -176,6 +194,10 @@ public class Note implements Comparable<Note> {
 			return(n.getDuration() == getDuration() && n.getPitch() == getPitch());
 		} else
 			return false;
+	}
+	
+	@Override public Note clone() {
+		return new Note(start, stop, pitch);
 	}
 	
 }

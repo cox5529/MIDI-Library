@@ -20,7 +20,7 @@ import cox5529.midi.track.MusicTrack;
  * Class used to store a MIDI file or song.
  * 
  * @author Brandon Cox
- * 
+ * 		
  */
 public class MIDIFile {
 	
@@ -115,7 +115,7 @@ public class MIDIFile {
 					for(int k = 0; k < cur.size(); k++) {
 						toAdd.add(cur.get(k));
 					}
-					measures.add(new Measure(toAdd, false));
+					measures.add(new Measure(toAdd, res));
 					measureStart += maxDur + 1;
 					j--;
 					continue;
@@ -149,7 +149,7 @@ public class MIDIFile {
 					for(int k = 0; k < cur.size(); k++) {
 						toAdd.add(cur.get(k));
 					}
-					measures.add(new Measure(toAdd, tie));
+					measures.add(new Measure(toAdd, res));
 					cur.clear();
 					if(tie) {
 						cur.add(new MIDIEvent(0, (byte) 0x90, events.get(j - 1).getData()));
@@ -168,7 +168,7 @@ public class MIDIFile {
 		for(int k = 0; k < cur.size(); k++) {
 			toAdd1.add(cur.get(k));
 		}
-		measures.add(new Measure(toAdd1, false));
+		measures.add(new Measure(toAdd1, res));
 		
 		for(int i = 1; i < tracks.size(); i++) {
 			cur.clear();
@@ -289,6 +289,7 @@ public class MIDIFile {
 	 * @throws IOException if the file is not found or there is an error
 	 */
 	public void write(File f, boolean debug) throws IOException {
+		f.mkdir();
 		FileOutputStream fos = new FileOutputStream(f);
 		fos.write(new byte[] { 0x4D, 0x54, 0x68, 0x64 }); // Literal "MThd"
 		fos.write(new byte[] { 0x00, 0x00, 0x00, 0x06 });

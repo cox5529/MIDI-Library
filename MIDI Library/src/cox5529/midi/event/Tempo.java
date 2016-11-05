@@ -26,7 +26,7 @@ public class Tempo extends MIDIEvent {
 		byte[] data = new byte[5];
 		data[0] = 0x51;
 		data[1] = 0x03;
-		byte[] temp = ByteBuffer.allocate(4).putInt(60000000 / tempo).array();
+		byte[] temp = ByteBuffer.allocate(4).putInt((int) (tempo / 0.00012)).array();
 		data[2] = temp[1];
 		data[3] = temp[2];
 		data[4] = temp[3];

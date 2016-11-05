@@ -31,6 +31,29 @@ public class Pitch implements Comparable<Pitch> {
 	}
 	
 	/**
+	 * Gets the size of the follow HashMap
+	 * 
+	 * @return the size of the follow HashMap
+	 */
+	public int getSize() {
+		return follow.size();
+	}
+	
+	/**
+	 * Checks to see if the given key matches the key for this pitch object
+	 * 
+	 * @param key the key to test
+	 * @return true if they are equal
+	 */
+	public boolean isMatch(byte[] key) {
+		for(int i = 0; i < key.length; i++) {
+			if(key[i] != precede[i])
+				return false;
+		}
+		return true;
+	}
+	
+	/**
 	 * Adds a pitch to this Note's data
 	 * 
 	 * @param p the pitch to add

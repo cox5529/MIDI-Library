@@ -4,6 +4,7 @@
 package cox5529.generator.storage;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * @author Brandon Cox
@@ -18,6 +19,26 @@ public class PhraseTree extends Phrase {
 		super(notes, supports, id);
 		this.p1 = p1;
 		this.p2 = p2;
+	}
+	
+	private PhraseTree(ArrayList<Note> notes, int id, ArrayList<byte[]> chords, Phrase p1, Phrase p2) {
+		super(notes, id, chords);
+		this.p1 = p1;
+		this.p2 = p2;
+	}
+	
+	/**
+	 * Gets the number of children in this tree
+	 * 
+	 * @return the number of children in this tree
+	 */
+	public int getChildCount() {
+		int count = 0;
+		if(p1 != null)
+			count += p1.getChildCount();
+		if(p2 != null)
+			count += p2.getChildCount();
+		return count;
 	}
 	
 	/**
@@ -38,13 +59,20 @@ public class PhraseTree extends Phrase {
 		ArrayList<ArrayList<Note>> supNotes = new ArrayList<ArrayList<Note>>();
 		ArrayList<ArrayList<Note>> p1Sup = p1.getSupports();
 		ArrayList<ArrayList<Note>> p2Sup = p2.getSupports();
-		for(int i = 0; i < p1Sup.size(); i++) {
-			ArrayList<Note> n = new ArrayList<Note>();
-			n.addAll(p1Sup.get(i));
-			n.addAll(p2Sup.get(i));
-			supNotes.add(n);
+		if(p1Sup == null) {
+			ArrayList<byte[]> chords = new ArrayList<byte[]>();
+			chords.addAll(p1.getChords());
+			chords.addAll(p2.getChords());
+			return new PhraseTree(notes, id, chords, p1, p2);
+		} else {
+			for(int i = 0; i < p1Sup.size(); i++) {
+				ArrayList<Note> n = new ArrayList<Note>();
+				n.addAll(p1Sup.get(i));
+				n.addAll(p2Sup.get(i));
+				supNotes.add(n);
+			}
+			return new PhraseTree(notes, supNotes, id, p1, p2);
 		}
-		return new PhraseTree(notes, supNotes, id, p1, p2);
 	}
 	
 	/**
@@ -63,6 +91,24 @@ public class PhraseTree extends Phrase {
 	 */
 	public Phrase getSecondChild() {
 		return p2;
+	}
+	
+	/**
+	 * Gets a HashSet of the children of this phrase
+	 * 
+	 * @return a HashSet of the children of this phrase
+	 */
+	public HashSet<Phrase> getChildren() {
+		HashSet<Phrase> re = new HashSet<Phrase>();
+		if(p1 instanceof PhraseTree) {
+			re.addAll(((PhraseTree) p1).getChildren());
+		} else
+			re.add(p1);
+		if(p2 instanceof PhraseTree) {
+			re.addAll(((PhraseTree) p2).getChildren());
+		} else
+			re.add(p2);
+		return re;
 	}
 	
 	/**
@@ -91,6 +137,41 @@ public class PhraseTree extends Phrase {
 			re += " " + notes.get(i).getPitch();
 		}
 		return re;
+	}
+	
+	/**
+	 * Given an array of ids, determines which measures have different ids.
+	 * 
+	 * @param ids array of ids to compare to the ids in this tree
+	 * @return a boolean array of the measures that are different, or null if ids.length is not the same as the number of children in this tree
+	 */
+	public boolean[] derivLocation(int[] ids) {
+		int[] childs = getChildIds();
+		if(ids.length != childs.length)
+			return null;
+		boolean[] deriv = new boolean[childs.length];
+		for(int i = 0; i < deriv.length; i++) {
+			if(ids[i] != childs[i])
+				deriv[i] = true;
+			else
+				deriv[i] = false;
+		}
+		return deriv;
+	}
+	
+	/**
+	 * Gets the ids of all children in order in this tree
+	 * 
+	 * @return the ids of all children in order in this tree
+	 */
+	public int[] getChildIds() {
+		String strId = getStringId();
+		String[] cIds = strId.split(" \\+ ");
+		int[] childs = new int[cIds.length];
+		for(int i = 0; i < cIds.length; i++) {
+			childs[i] = Integer.parseInt(cIds[i]);
+		}
+		return childs;
 	}
 	
 }

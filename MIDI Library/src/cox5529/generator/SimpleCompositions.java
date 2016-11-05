@@ -1,29 +1,25 @@
 package cox5529.generator;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
-
-import javax.imageio.ImageIO;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.TreeSet;
 
 import cox5529.generator.storage.Measure;
 import cox5529.generator.storage.Note;
 import cox5529.generator.storage.Phrase;
 import cox5529.generator.storage.PhraseTree;
 import cox5529.generator.storage.Pitch;
-import cox5529.midi.Helper;
 import cox5529.midi.MIDIFile;
 import cox5529.midi.event.MIDIEvent;
 import cox5529.midi.event.Tempo;
 import cox5529.midi.event.TimeSignature;
 import cox5529.midi.track.MusicTrack;
-import ij.ImagePlus;
-import ij.io.FileSaver;
-import ij.process.ColorProcessor;
 
 /**
  * Class that contains basic methods of algorithmic composition.
@@ -33,47 +29,36 @@ import ij.process.ColorProcessor;
  */
 public class SimpleCompositions {
 	
+	private int depth;
+	private byte[] instruments = null;
 	private boolean isMajor = true;
-	private int sharps = 0;
-	private int tempo = 120;
-	private ArrayList<Pitch> pitches;
+	private ArrayList<Measure> measures = null;
+	private long[] noteAverage = null;
 	private ArrayList<Note> notes;
-	private ArrayList<ArrayList<byte[]>> chordList;
-	private ArrayList<Phrase> phrases;
 	private long[] noteSum = null;
 	private long[] noteTotal = null;
-	private long[] volTotal = null;
-	private byte[] instruments = null;
-	private long[] noteAverage = null;
-	private long[] volAverage = null;
+	private ArrayList<Phrase> phrases;
+	private ArrayList<Pitch> pitches;
 	private int res = -1;
-	private int duration;
-	private int depth;
-	private int measureDepth;
-	private int chordDepth;
+	private int sharps = 0;
+	private int tempo = 120;
+	private long[] volAverage = null;
 	
-	private ArrayList<Measure> measures = null; // TODO fix
+	private long[] volTotal = null;
 	
 	/**
 	 * Constructs a new object that can be used to generate music.
 	 * 
 	 * @param input the given files to randomize
-	 * @param duration the duration of the song to be generated in measures
 	 * @param depth the depth to scan when generating a pitch
-	 * @param measureDepth amount of measures to generate when looking for best next measure
-	 * @param chordDepth number of chord progressions to attempt before finding best match
 	 */
-	public SimpleCompositions(int duration, int depth, int measureDepth, int chordDepth, MIDIFile... input) {
-		this.duration = duration;
+	public SimpleCompositions(int depth, MIDIFile... input) {
 		this.depth = depth;
-		this.measureDepth = measureDepth;
-		this.chordDepth = chordDepth;
 		isMajor = true;
 		sharps = 0;
 		tempo = 120;
 		pitches = new ArrayList<Pitch>();
 		notes = new ArrayList<Note>();
-		chordList = new ArrayList<ArrayList<byte[]>>();
 		phrases = new ArrayList<Phrase>();
 		measures = new ArrayList<Measure>();
 		noteSum = null;
@@ -82,6 +67,7 @@ public class SimpleCompositions {
 		instruments = null;
 		res = -1;
 		int prevMeasureSize = 0;
+		long length = 0;
 		for(int b = 0; b < input.length; b++) {
 			ArrayList<Measure> measures = new ArrayList<Measure>();
 			ArrayList<MusicTrack> tracks = input[b].getTracks();
@@ -96,7 +82,6 @@ public class SimpleCompositions {
 			}
 			ArrayList<MIDIEvent> events = tracks.get(0).getEvents();
 			ArrayList<MIDIEvent> cur = new ArrayList<MIDIEvent>();
-			int processed = 0;
 			long measureStart = 0;
 			long maxDur = res * 4 - 1;
 			long curStart = -1;
@@ -108,12 +93,12 @@ public class SimpleCompositions {
 						for(int k = 0; k < cur.size(); k++) {
 							toAdd.add(cur.get(k));
 						}
-						measures.add(new Measure(toAdd, false));
+						measures.add(new Measure(toAdd, res));
 						measureStart += maxDur + 1;
 						j--;
 						continue;
 					}
-					if(processed >= depth && j != events.size() - 3) {
+					if(j != events.size() - 3) {
 						// Pitch stuff
 						noteSum[0] += event.getData()[0];
 						noteTotal[0]++;
@@ -147,7 +132,6 @@ public class SimpleCompositions {
 					event.setTimeStamp(curStart - measureStart);
 					cur.add(event);
 				} else if(curStart != -1 && (event.getStatus() == (byte) 0x90 && event.getData()[1] == 0) || event.getStatus() == (byte) 0x80) {
-					processed++;
 					long noteDur = event.getTimeStamp() - curStart;
 					if(noteDur == 455 || noteDur == 479)
 						noteDur = 479;
@@ -172,7 +156,7 @@ public class SimpleCompositions {
 						for(int k = 0; k < cur.size(); k++) {
 							toAdd.add(cur.get(k));
 						}
-						measures.add(new Measure(toAdd, tie));
+						measures.add(new Measure(toAdd, res));
 						cur.clear();
 						if(tie) {
 							cur.add(new MIDIEvent(0, (byte) 0x90, events.get(j - 1).getData()));
@@ -191,11 +175,12 @@ public class SimpleCompositions {
 					instruments[0] = event.getData()[0];
 				}
 			}
+			length = events.get(events.size() - 1).getTimeStamp();
 			ArrayList<MIDIEvent> toAdd1 = new ArrayList<MIDIEvent>();
 			for(int k = 0; k < cur.size(); k++) {
 				toAdd1.add(cur.get(k));
 			}
-			measures.add(new Measure(toAdd1, false));
+			measures.add(new Measure(toAdd1, res));
 			
 			for(int i = 1; i < tracks.size(); i++) {
 				cur.clear();
@@ -226,7 +211,6 @@ public class SimpleCompositions {
 						event.setTimeStamp(curStart - measureStart);
 						cur.add(event);
 					} else if(curStart != -1 && (status / 16 == 0x9 && event.getData()[1] == 0) || event.getStatus() == (byte) 0x80) {
-						processed++;
 						long noteDur = event.getTimeStamp() - curStart;
 						if(noteDur == 455 || noteDur == 479)
 							noteDur = 479;
@@ -269,7 +253,14 @@ public class SimpleCompositions {
 				}
 				if(mCount < measures.size())
 					measures.get(mCount).addSupport(toAdd1);
+				long trackLength = supportEvents.get(supportEvents.size() - 1).getTimeStamp();
+				while(trackLength < length) {
+					mCount++;
+					measures.get(mCount).addSupport(new ArrayList<MIDIEvent>());
+					trackLength += res * 4;
+				}
 				mCount = prevMeasureSize;
+				
 			}
 			prevMeasureSize = measures.size();
 			this.measures.addAll(measures);
@@ -287,7 +278,6 @@ public class SimpleCompositions {
 			}
 			Collections.sort(notes);
 			
-			ArrayList<Note> nTemp = new ArrayList<Note>(notes);
 			phrases = findPhrasesMeasure();
 			
 		}
@@ -300,62 +290,13 @@ public class SimpleCompositions {
 			noteAverage[i] -= noteAverage[i] % 12;
 			volAverage[i] = volTotal[i] / noteTotal[i];
 		}
-	}
-	
-	private ArrayList<Phrase> findPhrasesMeasure() {
-		ArrayList<Phrase> phrases = new ArrayList<Phrase>();
-		int curId = 100;
+		
 		for(int i = 0; i < measures.size(); i++) {
 			Measure m = measures.get(i);
-			if(m.getNotes().size() > 1) {
-				int id = m.getPhrase(phrases);
-				if(id == -1) {
-					phrases.add(new Phrase(m.getNotes(), m.getSupportNotes(), curId));
-					curId += 100;
-				} else {
-					phrases.add(new Phrase(m.getNotes(), m.getSupportNotes(), id));
-				}
-			}
+			ArrayList<MIDIEvent> events = m.getEvents();
+			ArrayList<ArrayList<MIDIEvent>> sup = m.getSupport();
+			SimpleCompositions.write(new File("Test\\" + i + ".mid"), events, sup, res, tempo, instruments);
 		}
-		
-		phrases = combinePhrases(phrases, curId);
-		int maxId = 0;
-		for(int i = 0; i < phrases.size(); i++) {
-			int id = phrases.get(i).getId();
-			if(id > maxId)
-				maxId = id;
-		}
-		phrases = simplifyPhrases(phrases, 100 * (maxId / 100) + 100);
-		
-		return phrases;
-	}
-	
-	private ArrayList<Phrase> simplifyPhrases(ArrayList<Phrase> phrases, int curId) {
-		// combine non repeated phrases
-		for(int size = phrases.size() - 1; size > 1; size--) {
-			for(int i = 0; i < phrases.size() - size; i++) {
-				boolean good = true;
-				double avgDur = phrases.get(i).getAverageDuration();
-				for(int j = i; j < i + size; j++) {
-					Phrase p = phrases.get(j);
-					if(p instanceof PhraseTree || p.getAverageDuration() > 1.25 * avgDur || p.getAverageDuration() < 0.75 * avgDur) {
-						good = false;
-						break;
-					}
-				}
-				if(good) {
-					PhraseTree pt = PhraseTree.construct(phrases.remove(i), phrases.remove(i), curId);
-					phrases.add(i, pt);
-					for(int j = 2; j < size; j++) {
-						pt = (PhraseTree) phrases.remove(i);
-						pt = PhraseTree.construct(pt, phrases.remove(i), curId);
-						phrases.add(i, pt);
-					}
-					curId += 100;
-				}
-			}
-		}
-		return phrases;
 	}
 	
 	private ArrayList<Phrase> combinePhrases(ArrayList<Phrase> phrases, int curId) {
@@ -367,7 +308,7 @@ public class SimpleCompositions {
 			int deriv = 1;
 			for(int j = i + 2; j < phrases.size() - 1; j++) {
 				int[] ids = { phrases.get(j).getId(), phrases.get(j + 1).getId() };
-				if(ids[0] / 100 == window[0] / 100 && ids[1] / 100 == window[1] / 100) {
+				if(ids[0] / 100 == window[0] / 100 && ids[1] / 100 == window[1] / 100 && phrases.get(j).supportMatch(phrases.get(j + 1))) {
 					if(!match) {
 						PhraseTree pt = PhraseTree.construct(phrases.remove(i), phrases.remove(i), curId);
 						phrases.add(i, pt);
@@ -406,407 +347,243 @@ public class SimpleCompositions {
 		return phrases;
 	}
 	
-	private ArrayList<Phrase> findPhrasesImages(ArrayList<Note> notes) {
-		// [start index of window][start index of curLoc][length of window][intensity of window]
-		// array of images with axes [start index of window][startIndex of curLoc] = intensity, different image per length
-		long end = notes.get(notes.size() - 1).getStop() + 1;
-		int totalBeats = (int) (end / res) + 1;
-		for(int i = 1; i < 32; i++) { // 32 beats = 8 measures in 4/4 time
-			long dur = res * i;
-			int[][] data = new int[totalBeats - i][totalBeats - i];
-			for(int j = 0; j < totalBeats - i; j++) { // loop through every possible start index, 1 beat at a time
-				ArrayList<Note> window = getWindow(j * res, dur);
-				for(int k = 0; k < totalBeats - i; k++) { // loop through every possible curLoc, 1 beat at a time
-					if(Math.abs(j - k) >= i) {
-						ArrayList<Note> cur = getWindow(k * res, dur);
-						data[j][k] = getIntensity(window, cur);
-					}
+	private ArrayList<Phrase> findPhrasesMeasure() {
+		ArrayList<Phrase> phrases = new ArrayList<Phrase>();
+		int curId = 100;
+		for(int i = 0; i < measures.size(); i++) {
+			Measure m = measures.get(i);
+			if(m.getNotes().size() > 1) {
+				ArrayList<Note> notes = addRests(m.getNotes());
+				ArrayList<ArrayList<Note>> sup = m.getSupportNotes();
+				for(int j = 0; j < sup.size(); j++) {
+					ArrayList<Note> sups = sup.remove(j);
+					sups = addRests(sups);
+					sup.add(j, sups);
 				}
-			}
-			
-			BufferedImage img = writeImage(data, i);
-			ColorProcessor cp = new ColorProcessor(img);
-			int[][] orig = cp.getIntArray();
-			cp.erode();
-			ImagePlus ip = new ImagePlus(i + "dilate", cp);
-			FileSaver fs = new FileSaver(ip);
-			fs.saveAsPng("Dilated Images\\" + i + "dilate.png");
-			int[][] erode = cp.getIntArray();
-			for(int j = 0; j < orig.length; j++) {
-				for(int k = 0; k < orig[0].length; k++) {
-					if(orig[j][k] == erode[j][k] && orig[j][k] == 255)
-						System.out.printf("Window Start: %d\nLocation Start: %d\nWindow Size: %d\n\n", j, k, i);
+				int id = m.getPhrase(phrases);
+				if(id == -1) {
+					phrases.add(new Phrase(notes, sup, curId));
+					curId += 100;
+				} else {
+					phrases.add(new Phrase(notes, sup, id));
 				}
+				phrases.get(phrases.size() - 1).generateChords(sharps, isMajor);
 			}
-			
 		}
-		return null;
-		// find phrases based on images
-		// write a list of all possible phrases greater than a specific length
+		
+		phrases = combinePhrases(phrases, curId);
+		int maxId = 0;
+		for(int i = 0; i < phrases.size(); i++) {
+			int id = phrases.get(i).getId();
+			if(id > maxId)
+				maxId = id;
+		}
+		phrases = simplifyPhrases(phrases, 100 * (maxId / 100) + 100);
+		return phrases;
 	}
 	
-	private int getIntensity(ArrayList<Note> window, ArrayList<Note> cur) {
-		double intensity = 0;
-		Note[] w = new Note[window.size()];
-		Note[] c = new Note[cur.size()];
-		window.toArray(w);
-		cur.toArray(c);
-		double div = window.size() + 0.0;
-		for(int i = 0; i < w.length; i++) {
-			// find closest match if one exists
-			Note best = null;
-			long wStart = (w[i].getStart() - w[0].getStart());
-			long wDur = w[i].getDuration();
-			for(int j = 0; j < c.length; j++) {
-				long cStart = c[j].getStart() - c[0].getStart();
-				long cDur = c[j].getDuration();
-				if(best == null)
-					best = c[j];
-				if(cStart == wStart) { // both notes start at same time
-					best = c[j];
-					break;
-				} else if(cDur < wDur && (wStart <= cStart && cStart <= wStart + wDur)) {
-					best = c[j];
-					break;
-				} else if(wDur < cDur && (cStart <= wStart && wStart <= cStart + cDur)) {
-					best = c[j];
-					break;
-				}
-			}
-			if(best == null)
-				return 0;
-			if(best.getDuration() == wDur)
-				intensity += 0.5;
-				
-			if(best.getPitch() == w[i].getPitch()) {
-				intensity += 0.5;
-			} else {
-				intensity += 0.5 * 1 / (Math.abs(w[i].getPitch() - best.getPitch()));
-			}
-			
-		}
-		return (int) (255 * intensity / div);
-	}
-	
-	private ArrayList<Note> getWindow(long start, long dur) {
-		ArrayList<Note> re = new ArrayList<Note>();
+	private ArrayList<Note> addRests(ArrayList<Note> notes) {
+		long prevEnd = 0;
 		for(int i = 0; i < notes.size(); i++) {
 			Note n = notes.get(i);
-			if(n.getStop() > start + dur)
-				break;
-			else if(n.getStart() >= start)
-				re.add(n);
-		}
-		if(re.size() == 0) {
-			for(int i = 0; i < notes.size(); i++) {
-				Note n = notes.get(i);
-				if(n.getStart() >= start) {
-					re.add(n);
-					break;
-				}
+			long start = n.getStart();
+			if(start - prevEnd > 1) {
+				notes.add(i, new Note(prevEnd + 1, start - 1, (byte) -1));
 			}
+			prevEnd = n.getStop();
 		}
-		return re;
-	}
-	
-	private BufferedImage writeImage(int[][] data, int name) {
-		String path = "Phrase Images\\" + name + ".png";
-		BufferedImage img = new BufferedImage(data.length, data[0].length, BufferedImage.TYPE_BYTE_GRAY);
-		for(int x = 0; x < data[0].length; x++) {
-			for(int y = 0; y < data.length; y++) {
-				img.setRGB(x, y, data[y][x] + (data[y][x] << 8) + (data[y][x] << 16));
-			}
-		}
-		File imgFile = new File(path);
-		imgFile.mkdirs();
-		try {
-			ImageIO.write(img, "png", imgFile);
-		} catch(IOException e) {
-			e.printStackTrace();
-		}
-		return img;
+		return notes;
 	}
 	
 	/**
 	 * Generates a new song
 	 * 
+	 * @param measureDepth scanning depth for rhythm generation
+	 * 		
 	 * @return the MIDIFile object representing the generated song
 	 */
-	public MIDIFile generateSong() {
+	public MIDIFile generateSong(int measureDepth) {
+		for(int i = 0; i < measures.size(); i++) {
+			if(measures.get(i).getNotes().size() == 0) {
+				measures.remove(i);
+				i--;
+			}
+		}
 		MIDIFile output = new MIDIFile();
 		output.setResolution(res);
-		MusicTrack newTrack = new MusicTrack();
-		newTrack.addEvent(TimeSignature.construct(0, (byte) 4, (byte) 4));
+		MusicTrack[] tracks = new MusicTrack[1 + phrases.get(0).getSupports().size()];
+		for(int i = 0; i < tracks.length; i++) {
+			tracks[i] = new MusicTrack();
+		}
+		tracks[0].addEvent(TimeSignature.construct(0, (byte) 4, (byte) 4));
 		Tempo t = Tempo.construct(0, tempo);
-		newTrack.addEvent(t);
-		newTrack.changeInstrument(0, 0, instruments[0]);
-		MusicTrack[] supportTracks = new MusicTrack[instruments.length - 1];
-		for(int i = 0; i < supportTracks.length; i++) {
-			supportTracks[i] = new MusicTrack();
-			supportTracks[i].changeInstrument(0, i + 1, instruments[i + 1]);
+		tracks[0].addEvent(t);
+		for(int i = 0; i < tracks.length; i++) {
+			tracks[i].changeInstrument(0, 0, instruments[i]);
 		}
 		
+		TreeSet<Integer> ids = new TreeSet<Integer>();
+		for(int i = 0; i < phrases.size(); i++) {
+			Phrase p = phrases.get(i);
+			if(p instanceof PhraseTree) {
+				int[] toAdd = ((PhraseTree) p).getChildIds();
+				for(int j = 0; j < toAdd.length; j++) {
+					ids.add(toAdd[j]);
+				}
+			} else
+				ids.add(p.getId());
+		}
+		@SuppressWarnings("unchecked") TreeSet<Integer> idsDeriv = (TreeSet<Integer>) ids.clone();
+		Iterator<Integer> it = ids.iterator();
+		while(it.hasNext()) {
+			int val = it.next();
+			if(val % 100 != 0) {
+				ids.remove(val);
+				it = ids.iterator();
+			}
+		}
+		
+		Iterator<Integer> itDeriv = idsDeriv.iterator();
+		while(itDeriv.hasNext()) {
+			int val = itDeriv.next();
+			if(val % 100 == 0) {
+				idsDeriv.remove(val);
+				itDeriv = idsDeriv.iterator();
+			}
+		}
 		long pos = 0;
-		newTrack = getMelody(newTrack, (byte) volAverage[0]); // TODO fix
-		
-		int bestRating = -1;
-		int bestStart = -1;
-		int bestList = -1;
-		// chord progressions
-		for(int r = 0; r < chordDepth; r++) {
-			int list = (int) (chordList.size() * Math.random());
-			ArrayList<byte[]> chords = chordList.get(list);
-			int chordIndex = (int) (Math.random() * (chords.size() - duration));
-			int rating = 0;
-			for(int j = 0; j < duration; j++) {
-				byte[] chord = chords.get(chordIndex);
-				chordIndex++;
-				pos = 4 * j * res;
-				byte melPitch = 0;
-				ArrayList<MIDIEvent> events = newTrack.getEvents();
-				for(int i = events.size() - 1; i >= 0; i--) {
-					MIDIEvent e = events.get(i);
-					int status = Byte.toUnsignedInt(e.getStatus()) / 0x10;
-					if(e.getTimeStamp() < pos) {
-						for(int k = i + 1; k < events.size(); k++) {
-							e = events.get(k);
-							if(e.getTimeStamp() > pos && status == 0x9 && e.getData()[1] != 0)
-								break;
-						}
-						melPitch = Helper.getLowestOctave(sharps, isMajor, e.getData()[0]);
-						break;
-					} else if(e.getTimeStamp() == pos && status == 0x9 && e.getData()[1] != 0) {
-						melPitch = Helper.getLowestOctave(sharps, isMajor, e.getData()[0]);
-						break;
-					}
-				}
-				int index = Helper.getIndex(chord, melPitch);
-				if(index >= 0) {
-					rating++;
-				}
+		int idx = 0;
+		HashSet<Phrase> measures = new HashSet<Phrase>();
+		for(int i = 0; i < phrases.size(); i++) {
+			Phrase p = phrases.get(i);
+			System.out.println(p.toString(res) + "\n"); // TODO print
+			if(p instanceof PhraseTree && p.getId() % 100 == 0)
+				measures.addAll(((PhraseTree) p).getChildren());
+			else if(p.getId() % 100 == 0)
+				measures.add(p);
+		}
+		ArrayList<Double> avgDur = new ArrayList<Double>();
+		Iterator<Phrase> mIt = new TreeSet<Phrase>(measures).iterator();
+		while(mIt.hasNext()) {
+			Phrase p = mIt.next();
+			avgDur.add(p.getAverageDuration());
+		}
+		Phrase[] phrases = new Phrase[ids.size()];
+		it = ids.iterator();
+		while(it.hasNext()) {
+			int val = it.next();
+			Phrase[] m = new Phrase[measures.size()];
+			measures.toArray(m);
+			Phrase p = null;
+			Phrase[] r = new Phrase[measureDepth];
+			for(int i = 0; i < r.length; i++) {
+				r[i] = m[(int) (Math.random() * m.length)];
 			}
-			if(rating > bestRating) {
-				bestStart = chordIndex - duration;
-				bestRating = rating;
-				bestList = list;
+			double avg = avgDur.get(idx);
+			for(int i = 0; i < r.length; i++) {
+				if(p == null)
+					p = r[i];
+				else if(Math.abs(p.getAverageDuration() - avg) > Math.abs(r[i].getAverageDuration() - avg))
+					p = r[i];
 			}
+			measures.remove(p);
+			ArrayList<Note> notes = p.getNotes();
+			int len = 0;
+			for(int k = 0; k < notes.size(); k++) {
+				if(notes.get(k).getPitch() != -1)
+					len++;
+			}
+			ArrayList<Byte> pitches = getPitches(null, len);
+			len = 0;
+			for(int k = 0; k < notes.size(); k++) {
+				Note n = notes.get(k);
+				if(n.getPitch() != -1) {
+					n.setPitch(pitches.get(len));
+					
+					len++;
+				}
+				long dur = n.getDuration();
+				n.setStart(pos);
+				n.setStop(pos + dur);
+				pos += dur + 1;
+			}
+			phrases[idx++] = new Phrase(notes, val, p.getChords());
 		}
 		
-		if(bestRating < 0.5)
-			return generateSong();
-		// chords
-		ArrayList<byte[]> chords = chordList.get(bestList);
-		int chordIndex = bestStart;
-		int diSupIndex = (int) (Math.random() * supportTracks.length);
-		int triSupIndex = (int) (Math.random() * supportTracks.length);
-		while(triSupIndex == diSupIndex) {
-			triSupIndex = (int) (Math.random() * supportTracks.length);
+		Phrase[] dPhrases = new Phrase[idsDeriv.size()];
+		itDeriv = idsDeriv.iterator();
+		idx = 0;
+		while(itDeriv.hasNext()) {
+			int val = itDeriv.next();
+			Phrase p = phrases[val / 100 - 1];
+			dPhrases[idx] = p.mutate(sharps, isMajor, val);
+			idx++;
 		}
-		int quaSupIndex = (int) (Math.random() * supportTracks.length);
-		while(quaSupIndex == diSupIndex || quaSupIndex == triSupIndex)
-			quaSupIndex = (int) (Math.random() * supportTracks.length);
-		int melIndex = 0;
-		ArrayList<MIDIEvent> events = newTrack.getEvents();
-		for(int j = 0; j < duration; j++) {
-			pos = 4 * j * res;
-			byte[] chord = chords.get(chordIndex);
-			chordIndex++;
-			byte melPitch = 0;
-			long startTime = pos;
-			for(int i = events.size() - 1; i >= 0; i--) {
-				MIDIEvent e = events.get(i);
-				int status = Byte.toUnsignedInt(e.getStatus()) / 0x10;
-				if(e.getTimeStamp() < pos) {
-					for(int k = i + 1; k < events.size(); k++) {
-						e = events.get(k);
-						if(e.getTimeStamp() > pos && status == 0x9 && e.getData()[1] != 0) {
-							melIndex = k;
-							break;
-						}
-					}
-					startTime = e.getTimeStamp();
-					melPitch = Helper.getLowestOctave(sharps, isMajor, e.getData()[0]);
-					break;
-				} else if(e.getTimeStamp() == pos && status == 0x9 && e.getData()[1] != 0) {
-					melIndex = i;
-					melPitch = Helper.getLowestOctave(sharps, isMajor, e.getData()[0]);
-					break;
+		HashMap<Integer, Phrase> phraseSet = new HashMap<Integer, Phrase>();
+		for(int i = 0; i < dPhrases.length; i++) {
+			phraseSet.put(dPhrases[i].getId(), dPhrases[i]);
+		}
+		for(int i = 0; i < phrases.length; i++) {
+			phraseSet.put(phrases[i].getId(), phrases[i]);
+		}
+		
+		ArrayList<Phrase> actual = this.phrases;
+		ArrayList<Phrase> song = new ArrayList<Phrase>();
+		for(int i = 0; i < actual.size(); i++) {
+			Phrase p = actual.get(i);
+			int[] childs = p.getChildIds();
+			Phrase[] create = new Phrase[childs.length];
+			for(int j = 0; j < childs.length; j++) {
+				create[j] = phraseSet.get(childs[j]);
+			}
+			Phrase toAdd;
+			if(childs.length >= 2) {
+				toAdd = PhraseTree.construct(create[0], create[1], p.getId());
+				for(int j = 2; j < create.length; j++) {
+					toAdd = PhraseTree.construct(toAdd, create[j], p.getId());
+				}
+			} else if(create.length == 1)
+				toAdd = create[0];
+			else
+				continue;
+			song.add(toAdd);
+		}
+		
+		long ipos = 0;
+		for(int i = 0; i < song.size(); i++) {
+			pos = ipos;
+			Phrase p = song.get(i);
+			p.generateSupports(tracks.length - 1, noteAverage, sharps, isMajor);
+			ArrayList<Note> mel = p.getNotes();
+			for(int j = 0; j < mel.size(); j++) {
+				Note n = mel.get(j).clone();
+				long dur = n.getDuration();
+				n.setStart(pos);
+				n.setStop(pos + dur);
+				tracks[0].addNote(n, (byte) volAverage[0]);
+				pos += 1 + dur;
+			}
+			int m = (int) ((pos + 1) / (4 * res));
+			ArrayList<ArrayList<Note>> supports = p.getSupports();
+			for(int j = 0; j < supports.size(); j++) {
+				pos = ipos;
+				ArrayList<Note> sup = supports.get(j);
+				for(int k = 0; k < sup.size(); k++) {
+					Note n = sup.get(k).clone();
+					long dur = n.getDuration();
+					n.setStart(pos);
+					n.setStop(pos + dur);
+					tracks[j + 1].addNote(n, (byte) volAverage[j + 1]);
+					pos += 1 + dur;
 				}
 			}
-			int index = Helper.getIndex(chord, melPitch);
-			if(index >= 0) {
-				// chord contains pitch
-				if(chord.length == 2) {
-					byte diPitch = chord[(index == 0 ? 1: 0)];
-					diPitch = Helper.increaseToAverageOctave(diPitch, (byte) noteAverage[diSupIndex + 1]);
-					MIDIEvent start = new MIDIEvent(startTime, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, (byte) volAverage[diSupIndex + 1] });
-					MIDIEvent stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, 0 });
-					supportTracks[diSupIndex].addEvent(start);
-					supportTracks[diSupIndex].addEvent(stop);
-				} else if(chord.length == 3) {
-					byte diPitch = 0;
-					byte triPitch = 0;
-					if(index == 0) {
-						diPitch = Helper.increaseToAverageOctave(chord[1], (byte) noteAverage[diSupIndex + 1]);
-						triPitch = Helper.increaseToAverageOctave(chord[2], (byte) noteAverage[triSupIndex + 1]);
-					} else if(index == 1) {
-						diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-						triPitch = Helper.increaseToAverageOctave(chord[2], (byte) noteAverage[triSupIndex + 1]);
-					} else {
-						diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-						triPitch = Helper.increaseToAverageOctave(chord[1], (byte) noteAverage[triSupIndex + 1]);
-					}
-					MIDIEvent start = new MIDIEvent(startTime, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, (byte) volAverage[diSupIndex + 1] });
-					MIDIEvent stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, 0 });
-					supportTracks[diSupIndex].addEvent(start);
-					supportTracks[diSupIndex].addEvent(stop);
-					start = new MIDIEvent(startTime, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, (byte) volAverage[triSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, 0 });
-					supportTracks[triSupIndex].addEvent(start);
-					supportTracks[triSupIndex].addEvent(stop);
-				} else if(chord.length == 4) {
-					byte diPitch = 0;
-					byte triPitch = 0;
-					byte quaPitch = 0;
-					if(index == 0) {
-						diPitch = Helper.increaseToAverageOctave(chord[1], (byte) noteAverage[diSupIndex + 1]);
-						triPitch = Helper.increaseToAverageOctave(chord[2], (byte) noteAverage[triSupIndex + 1]);
-						quaPitch = Helper.increaseToAverageOctave(chord[3], (byte) noteAverage[quaSupIndex + 1]);
-					} else if(index == 1) {
-						diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-						triPitch = Helper.increaseToAverageOctave(chord[2], (byte) noteAverage[triSupIndex + 1]);
-						quaPitch = Helper.increaseToAverageOctave(chord[3], (byte) noteAverage[quaSupIndex + 1]);
-					} else if(index == 2) {
-						diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-						triPitch = Helper.increaseToAverageOctave(chord[1], (byte) noteAverage[triSupIndex + 1]);
-						quaPitch = Helper.increaseToAverageOctave(chord[3], (byte) noteAverage[quaSupIndex + 1]);
-					} else {
-						diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-						triPitch = Helper.increaseToAverageOctave(chord[1], (byte) noteAverage[triSupIndex + 1]);
-						quaPitch = Helper.increaseToAverageOctave(chord[2], (byte) noteAverage[quaSupIndex + 1]);
-					}
-					MIDIEvent start = new MIDIEvent(startTime, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, (byte) volAverage[diSupIndex + 1] });
-					MIDIEvent stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, 0 });
-					supportTracks[diSupIndex].addEvent(start);
-					supportTracks[diSupIndex].addEvent(stop);
-					start = new MIDIEvent(startTime, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, (byte) volAverage[triSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, 0 });
-					supportTracks[triSupIndex].addEvent(start);
-					supportTracks[triSupIndex].addEvent(stop);
-					start = new MIDIEvent(startTime, (byte) (0x90 + quaSupIndex + 1), new byte[] { quaPitch, (byte) volAverage[quaSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + quaSupIndex + 1), new byte[] { quaPitch, 0 });
-					supportTracks[quaSupIndex].addEvent(start);
-					supportTracks[quaSupIndex].addEvent(stop);
-				}
-			} else {
-				MIDIEvent start = events.get(melIndex);
-				MIDIEvent stop = events.get(melIndex + 1);
-				byte top = Helper.increaseToAverageOctave(chord[chord.length - 1], (byte) noteAverage[0]);
-				start.setData(new byte[] { top, start.getData()[1] });
-				stop.setData(new byte[] { top, 0 });
-				index = chord.length - 1;
-				events.remove(melIndex);
-				events.add(melIndex, start);
-				events.remove(melIndex + 1);
-				events.add(melIndex + 1, stop);
-				newTrack.setEvents(events);
-				if(chord.length == 2) {
-					byte diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-					start = new MIDIEvent(startTime, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, (byte) volAverage[diSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, 0 });
-					supportTracks[diSupIndex].addEvent(start);
-					supportTracks[diSupIndex].addEvent(stop);
-				} else if(chord.length == 3) {
-					byte diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-					byte triPitch = Helper.increaseToAverageOctave(chord[1], (byte) noteAverage[triSupIndex + 1]);
-					start = new MIDIEvent(startTime, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, (byte) volAverage[diSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, 0 });
-					supportTracks[diSupIndex].addEvent(start);
-					supportTracks[diSupIndex].addEvent(stop);
-					start = new MIDIEvent(startTime, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, (byte) volAverage[triSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, 0 });
-					supportTracks[triSupIndex].addEvent(start);
-					supportTracks[triSupIndex].addEvent(stop);
-				} else if(chord.length == 4) {
-					byte diPitch = Helper.increaseToAverageOctave(chord[0], (byte) noteAverage[diSupIndex + 1]);
-					byte triPitch = Helper.increaseToAverageOctave(chord[1], (byte) noteAverage[triSupIndex + 1]);
-					byte quaPitch = Helper.increaseToAverageOctave(chord[2], (byte) noteAverage[quaSupIndex + 1]);
-					start = new MIDIEvent(startTime, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, (byte) volAverage[diSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + diSupIndex + 1), new byte[] { diPitch, 0 });
-					supportTracks[diSupIndex].addEvent(start);
-					supportTracks[diSupIndex].addEvent(stop);
-					start = new MIDIEvent(startTime, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, (byte) volAverage[triSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + triSupIndex + 1), new byte[] { triPitch, 0 });
-					supportTracks[triSupIndex].addEvent(start);
-					supportTracks[triSupIndex].addEvent(stop);
-					start = new MIDIEvent(startTime, (byte) (0x90 + quaSupIndex + 1), new byte[] { quaPitch, (byte) volAverage[quaSupIndex + 1] });
-					stop = new MIDIEvent(pos + 4 * res - 1, (byte) (0x90 + quaSupIndex + 1), new byte[] { quaPitch, 0 });
-					supportTracks[quaSupIndex].addEvent(start);
-					supportTracks[quaSupIndex].addEvent(stop);
-				}
-			}
-			
+			ipos = m * res * 4;
 		}
-		output.addTrack(newTrack);
-		for(int i = 0; i < supportTracks.length; i++) {
-			output.addTrack(supportTracks[i]);
+		for(int i = 0; i < tracks.length; i++) {
+			output.addTrack(tracks[i]);
 		}
 		return output;
-	}
-	
-	private MusicTrack getMelody(MusicTrack newTrack, byte vol) {
-		// add all events to get rhythm
-		// create a list of n pitches, where n is the number of notes in the rhythm
-		// set the data of the rhythm events
-		long pos = 0;
-		Measure last = measures.get((int) (Math.random() * measures.size()));
-		ArrayList<MIDIEvent> rhythm = new ArrayList<MIDIEvent>();
-		for(int j = 0; j < duration; j++) {
-			ArrayList<MIDIEvent> newEvents = new ArrayList<MIDIEvent>();
-			Measure toAdd = null;
-			while(newEvents.size() == 0) {
-				Measure[] set = new Measure[measureDepth];
-				for(int i = 0; i < set.length; i++) {
-					set[i] = measures.get((int) (Math.random() * measures.size()));
-				}
-				int closest = 0;
-				for(int i = 1; i < set.length; i++) {
-					if(Math.abs(set[closest].getPartialAverageSpeed(res * 2, false) - last.getPartialAverageSpeed(res * 2, true)) > Math.abs(set[i].getPartialAverageSpeed(res * 2, false) - last.getPartialAverageSpeed(res * 2, true))) {
-						closest = i;
-					}
-				}
-				toAdd = set[closest];
-				last = toAdd;
-				newEvents = toAdd.getEvents();
-			}
-			pos = res * 4 * j;
-			for(int k = 0; k < newEvents.size(); k += 2) {
-				if(!(k == newEvents.size() - 1)) {
-					MIDIEvent event = newEvents.get(k).clone();
-					MIDIEvent event2 = newEvents.get(k + 1).clone();
-					event.setTimeStamp(pos + newEvents.get(k).getTimeStamp());
-					event2.setTimeStamp(pos + newEvents.get(k + 1).getTimeStamp());
-					rhythm.add(event);
-					rhythm.add(event2);
-				}
-			}
-		}
-		// Pitch stuff
-		int length = rhythm.size();
-		ArrayList<Byte> p = getPitches(null, length / 2);
-		int index = 0;
-		for(int i = 0; i < rhythm.size(); i++) {
-			MIDIEvent event = rhythm.get(i);
-			int status = Byte.toUnsignedInt(event.getStatus()) / 0x10;
-			if(status == 0x9 && event.getData()[1] != 0)
-				event.setData(new byte[] { p.get(index), vol });
-			else if(status == 0x9 && event.getData()[1] == 0) {
-				event.setData(new byte[] { p.get(index), 0 });
-				index++;
-			}
-		}
-		newTrack.addAllEvents(rhythm);
-		return newTrack;
+		
 	}
 	
 	private ArrayList<Byte> getPitches(ArrayList<Byte> re, int length) {
@@ -849,5 +626,95 @@ public class SimpleCompositions {
 		}
 		re.remove(re.size() - 1);
 		return getPitches(re, length);
+	}
+	
+	private ArrayList<Phrase> simplifyPhrases(ArrayList<Phrase> phrases, int curId) {
+		// combine non repeated phrases
+		for(int size = phrases.size() - 1; size > 1; size--) {
+			for(int i = 0; i < phrases.size() - size; i++) {
+				boolean good = true;
+				double avgDur = phrases.get(i).getAverageDuration();
+				for(int j = i; j < i + size; j++) {
+					Phrase p = phrases.get(j);
+					if(p instanceof PhraseTree || p.getAverageDuration() > 1.25 * avgDur || p.getAverageDuration() < 0.75 * avgDur) {
+						good = false;
+						break;
+					}
+				}
+				if(good) {
+					PhraseTree pt = PhraseTree.construct(phrases.remove(i), phrases.remove(i), curId);
+					phrases.add(i, pt);
+					for(int j = 2; j < size; j++) {
+						pt = (PhraseTree) phrases.remove(i);
+						pt = PhraseTree.construct(pt, phrases.remove(i), curId);
+						phrases.add(i, pt);
+					}
+					curId += 100;
+				}
+			}
+		}
+		return phrases;
+	}
+	
+	public String toString() {
+		String re = "";
+		re += ("Major:\t" + isMajor);
+		re += ("\nSharps:\t" + sharps);
+		re += ("\nTempo:\t" + tempo);
+		re += ("\nPitches:\n");
+		for(int i = 0; i < pitches.size(); i++) {
+			re += "\n" + pitches.get(i);
+		}
+		return re;
+		
+	}
+	
+	/**
+	 * Debug code for writing a MIDIFile
+	 * 
+	 * @param file the file to write to
+	 * @param events the events of the first track
+	 * @param support the events of the support tracks
+	 * @param res the resolution of the file
+	 * @param tempo the tempo of the file
+	 * @param instruments the instruments of the song
+	 */
+	public static void write(File file, ArrayList<MIDIEvent> events, ArrayList<ArrayList<MIDIEvent>> support, int res, int tempo, byte[] instruments) {
+		MIDIFile output = new MIDIFile();
+		output.setResolution(res);
+		MusicTrack[] tracks = new MusicTrack[1 + support.size()];
+		for(int i = 0; i < tracks.length; i++) {
+			tracks[i] = new MusicTrack();
+		}
+		tracks[0].addEvent(TimeSignature.construct(0, (byte) 4, (byte) 4));
+		Tempo t = Tempo.construct(0, tempo);
+		tracks[0].addEvent(t);
+		for(int i = 0; i < tracks.length; i++) {
+			tracks[i].changeInstrument(0, i, instruments[i]);
+		}
+		
+		if(events.size() > 0) {
+			long offset = events.get(0).getTimeStamp();
+			for(int i = 0; i < events.size(); i++) {
+				MIDIEvent event = events.get(i).clone();
+				event.setTimeStamp(event.getTimeStamp() - offset);
+				tracks[0].addEvent(event);
+			}
+			output.addTrack(tracks[0]);
+			for(int i = 1; i < tracks.length; i++) {
+				events = support.get(i - 1);
+				for(int j = 0; j < events.size(); j++) {
+					MIDIEvent event = events.get(j).clone();
+					event.setTimeStamp(event.getTimeStamp() - offset);
+					tracks[0].addEvent(event);
+				}
+				output.addTrack(tracks[i]);
+			}
+			try {
+				output.write(file, false);
+			} catch(IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 }

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
+import cox5529.generator.storage.Note;
 import cox5529.midi.Helper;
 import cox5529.midi.event.MIDIEvent;
 import cox5529.midi.event.MetaEvent;
@@ -196,6 +197,20 @@ public class MusicTrack {
 			i += size;
 		}
 		return new MusicTrack(events);
+	}
+	
+	/**
+	 * Adds a note to this MIDITrack
+	 * 
+	 * @param n the note to add
+	 * @param vol the volume of the note between 0 and 127
+	 */
+	public void addNote(Note n, byte vol) {
+		if(n.getPitch() != -1) {
+			MIDIEvent[] events = n.toEvents(vol);
+			addEvent(events[0]);
+			addEvent(events[1]);
+		}
 	}
 	
 	/**
