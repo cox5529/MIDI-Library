@@ -225,12 +225,31 @@ public class Measure {
 	 */
 	public int getPhrase(ArrayList<Phrase> phrases) {
 		if(phrases.size() != 0) {
-			for(int i = phrases.size() - 1; i >= 0; i--) {
-				int val = isPhrase(phrases.get(i));
-				if(val == 0)
-					return phrases.get(i).getId();
-				else if(val == 1)
-					return phrases.get(i).getId() + 1;
+			for(int i = 0; i < phrases.size(); i++) {
+				int id = phrases.get(i).getId();
+				if(id > 0 && id % 100 == 0) {
+					int val = isPhrase(phrases.get(i));
+					if(val == 0)
+						return id;
+					else if(val == 1) {
+						for(int j = phrases.size() - 1; j >= 0; j--) {
+							int pId = phrases.get(j).getId();
+							if(pId / 100 == id / 100 && pId > 0) {
+								id = pId;
+								break;
+							}
+						}
+						return id + 1;
+					} else if(val == 2) {
+						int aId = -id;
+						for(int j = 0; j < phrases.size(); j++) {
+							int pId = phrases.get(j).getId();
+							if(pId == aId)
+								aId--;
+						}
+						return aId;
+					}
+				}
 			}
 		}
 		return -1; // phrases does not contain this measure
@@ -263,7 +282,7 @@ public class Measure {
 		return supNotes;
 	}
 	
-	private int isPhrase(Phrase p) { // -1 for false, 0 for true, 1 for deriv
+	private int isPhrase(Phrase p) { // -1 for false, 0 for true, 1 for deriv, 2 for same rhythm
 		ArrayList<Note> pNotes = p.getNotes();
 		// is same?
 		if(pNotes.size() == notes.size()) {
@@ -280,6 +299,8 @@ public class Measure {
 		// is deriv?
 		if(isPitchDeriv(pNotes, notes) && isSimilarSupport(p))
 			return 1;
+		if(isSameRhythm(pNotes, notes))
+			return 2;
 		return -1;
 	}
 	
@@ -307,47 +328,6 @@ public class Measure {
 			return deriv;
 		}
 		return false;
-	}
-	
-	private boolean isRhythmicDeriv(ArrayList<Note> pNotes, ArrayList<Note> notes) {
-		if(isSameRhythm(pNotes, notes))
-			return false;
-		long[] nDur = new long[notes.size()];
-		long[] pDur = new long[pNotes.size()];
-		int pInd = 0;
-		int misses = 0;
-		int iter = 0;
-		long skipSum = 0;
-		int lastSkip = 0; // -1 = p, 1 = n
-		for(int i = 0; i < nDur.length; i++) {
-			nDur[i] = notes.get(i).getDuration();
-		}
-		for(int i = 0; i < pDur.length; i++) {
-			pDur[i] = pNotes.get(i).getDuration();
-		}
-		for(int i = 0; i < nDur.length; i++) {
-			iter++;
-			if(pInd == pDur.length) {
-				misses += (pDur.length - pInd);
-				break;
-			} else if((skipSum > pDur[pInd] && lastSkip == -1) || (skipSum > nDur[i] && lastSkip == 1)) {
-				return false;
-			} else if(pDur[pInd] == nDur[i] || (skipSum == pDur[pInd] && lastSkip == -1) || (skipSum == nDur[i] && lastSkip == 1)) {
-				pInd++;
-				skipSum = 0;
-			} else if(pDur[pInd] > nDur[i]) {
-				skipSum += nDur[i];
-				lastSkip = -1;
-				misses++;
-			} else if(pDur[pInd] < nDur[i]) {
-				skipSum += pDur[pInd];
-				lastSkip = 1;
-				misses++;
-				pInd++;
-				i--;
-			}
-		}
-		return ((misses + 0.0) / iter) < 0.1;
 	}
 	
 	private boolean isSameRhythm(ArrayList<Note> pNotes, ArrayList<Note> notes) {

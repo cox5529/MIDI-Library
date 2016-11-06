@@ -55,8 +55,10 @@ public class Phrase implements Comparable<Phrase> {
 	 * @param avgOctave the average octave of the instruments
 	 * @param sharps the number of sharps in the key signature, negative if flats
 	 * @param isMajor true if the key is major
+	 * @param max maximum pitches for every track
+	 * @param min minimum pitches for every track
 	 */
-	public void generateSupports(int supCount, long[] avgOctave, int sharps, boolean isMajor) {
+	public void generateSupports(int supCount, long[] avgOctave, int sharps, boolean isMajor, byte[] max, byte[] min) {
 		supports = new ArrayList<ArrayList<Note>>();
 		for(int i = 0; i < supCount; i++) {
 			supports.add(new ArrayList<Note>());
@@ -75,15 +77,7 @@ public class Phrase implements Comparable<Phrase> {
 		ArrayList<Note> qua = supports.get(quaSupIndex);
 		ArrayList<Note> tri = supports.get(triSupIndex);
 		ArrayList<Note> di = supports.get(diSupIndex);
-		if(Math.random() >= 0) {
-			byte[] c = chords.remove(chords.size() - 1);
-			chords.add(Helper.getChordFromNumeral("V", c.length, sharps, isMajor));
-		} else {
-			byte[] c = chords.remove(chords.size() - 1);
-			chords.remove(chords.size() - 1);
-			chords.add(Helper.getChordFromNumeral("V", c.length, sharps, isMajor));
-			chords.add(Helper.getChordFromNumeral("I", c.length, sharps, isMajor));
-		}
+		
 		for(int i = 0; i < chords.size(); i++) {
 			int step = (notes.size() - idx) / (chords.size() - i);
 			long dur = 0;
@@ -97,6 +91,10 @@ public class Phrase implements Comparable<Phrase> {
 					Note n = notes.get(j);
 					if(n.getStart() == pos) {
 						byte p = Helper.increaseToAverageOctave(chord[chord.length - 1], (byte) avgOctave[0]);
+						while(p > max[0])
+							p -= 12;
+						while(p < min[0])
+							p += 12;
 						n.setPitch(p);
 						break;
 					}
@@ -104,13 +102,28 @@ public class Phrase implements Comparable<Phrase> {
 			}
 			dur -= 1;
 			if(chord.length > 1) {
-				di.add(new Note(pos, pos + dur, Helper.increaseToAverageOctave(chord[0], (byte) avgOctave[diSupIndex + 1])));
+				byte p = Helper.increaseToAverageOctave(chord[1], (byte) avgOctave[diSupIndex + 1]);
+				while(p > max[diSupIndex + 1])
+					p -= 12;
+				while(p < min[diSupIndex + 1])
+					p += 12;
+				di.add(new Note(pos, pos + dur, p));
 			}
 			if(chord.length > 2) {
-				tri.add(new Note(pos, pos + dur, Helper.increaseToAverageOctave(chord[1], (byte) avgOctave[triSupIndex + 1])));
+				byte p = Helper.increaseToAverageOctave(chord[2], (byte) avgOctave[triSupIndex + 1]);
+				while(p > max[triSupIndex + 1])
+					p -= 12;
+				while(p < min[triSupIndex + 1])
+					p += 12;
+				tri.add(new Note(pos, pos + dur, p));
 			}
 			if(chord.length > 3) {
-				qua.add(new Note(pos, pos + dur, Helper.increaseToAverageOctave(chord[2], (byte) avgOctave[quaSupIndex + 1])));
+				byte p = Helper.increaseToAverageOctave(chord[3], (byte) avgOctave[quaSupIndex + 1]);
+				while(p > max[quaSupIndex + 1])
+					p -= 12;
+				while(p < min[quaSupIndex + 1])
+					p += 12;
+				qua.add(new Note(pos, pos + dur, p));
 			}
 			pos += dur + 1;
 		}
@@ -287,7 +300,11 @@ public class Phrase implements Comparable<Phrase> {
 	 * @return the list of notes in this phrase
 	 */
 	public ArrayList<Note> getNotes() {
-		return new ArrayList<Note>(notes);
+		ArrayList<Note> re = new ArrayList<Note>();
+		for(int i = 0; i < notes.size(); i++) {
+			re.add(notes.get(i).clone());
+		}
+		return re;
 	}
 	
 	/**

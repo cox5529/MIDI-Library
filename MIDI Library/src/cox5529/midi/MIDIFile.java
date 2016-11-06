@@ -289,7 +289,6 @@ public class MIDIFile {
 	 * @throws IOException if the file is not found or there is an error
 	 */
 	public void write(File f, boolean debug) throws IOException {
-		f.mkdir();
 		FileOutputStream fos = new FileOutputStream(f);
 		fos.write(new byte[] { 0x4D, 0x54, 0x68, 0x64 }); // Literal "MThd"
 		fos.write(new byte[] { 0x00, 0x00, 0x00, 0x06 });

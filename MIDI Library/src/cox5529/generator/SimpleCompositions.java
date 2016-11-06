@@ -34,6 +34,8 @@ public class SimpleCompositions {
 	private boolean isMajor = true;
 	private ArrayList<Measure> measures = null;
 	private long[] noteAverage = null;
+	private byte[] min = null;
+	private byte[] max = null;
 	private ArrayList<Note> notes;
 	private long[] noteSum = null;
 	private long[] noteTotal = null;
@@ -76,6 +78,11 @@ public class SimpleCompositions {
 				noteTotal = new long[tracks.size()];
 				volTotal = new long[tracks.size()];
 				instruments = new byte[tracks.size()];
+				min = new byte[tracks.size()];
+				for(int i = 0; i < min.length; i++) {
+					min[i] = 127;
+				}
+				max = new byte[tracks.size()];
 			}
 			if(res == -1) {
 				res = input[b].getResolution();
@@ -100,6 +107,10 @@ public class SimpleCompositions {
 					}
 					if(j != events.size() - 3) {
 						// Pitch stuff
+						if(event.getData()[0] > max[0])
+							max[0] = event.getData()[0];
+						if(event.getData()[0] < min[0])
+							min[0] = event.getData()[0];
 						noteSum[0] += event.getData()[0];
 						noteTotal[0]++;
 						volTotal[0] += event.getData()[1];
@@ -207,6 +218,10 @@ public class SimpleCompositions {
 						noteSum[i] += event.getData()[0];
 						volTotal[i] += event.getData()[1];
 						noteTotal[i]++;
+						if(event.getData()[0] > max[i])
+							max[i] = event.getData()[0];
+						if(event.getData()[0] < min[i])
+							min[i] = event.getData()[0];
 						curStart = event.getTimeStamp();
 						event.setTimeStamp(curStart - measureStart);
 						cur.add(event);
@@ -290,13 +305,6 @@ public class SimpleCompositions {
 			noteAverage[i] -= noteAverage[i] % 12;
 			volAverage[i] = volTotal[i] / noteTotal[i];
 		}
-		
-		for(int i = 0; i < measures.size(); i++) {
-			Measure m = measures.get(i);
-			ArrayList<MIDIEvent> events = m.getEvents();
-			ArrayList<ArrayList<MIDIEvent>> sup = m.getSupport();
-			SimpleCompositions.write(new File("Test\\" + i + ".mid"), events, sup, res, tempo, instruments);
-		}
 	}
 	
 	private ArrayList<Phrase> combinePhrases(ArrayList<Phrase> phrases, int curId) {
@@ -308,7 +316,7 @@ public class SimpleCompositions {
 			int deriv = 1;
 			for(int j = i + 2; j < phrases.size() - 1; j++) {
 				int[] ids = { phrases.get(j).getId(), phrases.get(j + 1).getId() };
-				if(ids[0] / 100 == window[0] / 100 && ids[1] / 100 == window[1] / 100 && phrases.get(j).supportMatch(phrases.get(j + 1))) {
+				if(Math.abs(ids[0] / 100) == window[0] / 100 && Math.abs(ids[1] / 100) == window[1] / 100 && phrases.get(j).supportMatch(phrases.get(j + 1))) {
 					if(!match) {
 						PhraseTree pt = PhraseTree.construct(phrases.remove(i), phrases.remove(i), curId);
 						phrases.add(i, pt);
@@ -316,8 +324,24 @@ public class SimpleCompositions {
 					int dif = (match ? 0: 1);
 					if(ids[0] == window[0] && ids[1] == window[1]) {
 						phrases.add(j - dif, PhraseTree.construct(phrases.remove(j - dif), phrases.remove(j - dif), curId));
-					} else {
+					} else if(ids[0] > 0 && ids[1] > 0) {
 						PhraseTree pt = PhraseTree.construct(phrases.remove(j - dif), phrases.remove(j - dif), curId + deriv);
+						boolean added = false;
+						for(int k = 0; k < phrases.size(); k++) {
+							Phrase p = phrases.get(k);
+							if(pt.getStringId().equals(p.getStringId())) {
+								pt.setId(p.getId());
+								added = true;
+								phrases.add(j - dif, pt);
+								break;
+							}
+						}
+						if(!added) {
+							phrases.add(j - dif, pt);
+							deriv++;
+						}
+					} else {
+						PhraseTree pt = PhraseTree.construct(phrases.remove(j - dif), phrases.remove(j - dif), -curId);
 						boolean added = false;
 						for(int k = 0; k < phrases.size(); k++) {
 							Phrase p = phrases.get(k);
@@ -421,7 +445,7 @@ public class SimpleCompositions {
 		for(int i = 0; i < tracks.length; i++) {
 			tracks[i].changeInstrument(0, 0, instruments[i]);
 		}
-		
+		TreeSet<Integer> negIds = new TreeSet<Integer>();
 		TreeSet<Integer> ids = new TreeSet<Integer>();
 		for(int i = 0; i < phrases.size(); i++) {
 			Phrase p = phrases.get(i);
@@ -437,8 +461,12 @@ public class SimpleCompositions {
 		Iterator<Integer> it = ids.iterator();
 		while(it.hasNext()) {
 			int val = it.next();
-			if(val % 100 != 0) {
+			if(val % 100 != 0 && val > 0) {
 				ids.remove(val);
+				it = ids.iterator();
+			} else if(val < 0) {
+				ids.remove(val);
+				negIds.add(val);
 				it = ids.iterator();
 			}
 		}
@@ -446,7 +474,7 @@ public class SimpleCompositions {
 		Iterator<Integer> itDeriv = idsDeriv.iterator();
 		while(itDeriv.hasNext()) {
 			int val = itDeriv.next();
-			if(val % 100 == 0) {
+			if(val % 100 == 0 || val < 0) {
 				idsDeriv.remove(val);
 				itDeriv = idsDeriv.iterator();
 			}
@@ -456,10 +484,9 @@ public class SimpleCompositions {
 		HashSet<Phrase> measures = new HashSet<Phrase>();
 		for(int i = 0; i < phrases.size(); i++) {
 			Phrase p = phrases.get(i);
-			System.out.println(p.toString(res) + "\n"); // TODO print
-			if(p instanceof PhraseTree && p.getId() % 100 == 0)
+			if(p instanceof PhraseTree && p.getId() % 100 == 0 && p.getId() > 0)
 				measures.addAll(((PhraseTree) p).getChildren());
-			else if(p.getId() % 100 == 0)
+			else if(p.getId() % 100 == 0 && p.getId() > 0)
 				measures.add(p);
 		}
 		ArrayList<Double> avgDur = new ArrayList<Double>();
@@ -510,6 +537,43 @@ public class SimpleCompositions {
 			phrases[idx++] = new Phrase(notes, val, p.getChords());
 		}
 		
+		Phrase[] negPhrases = new Phrase[negIds.size()];
+		Iterator<Integer> negIt = negIds.iterator();
+		idx = 0;
+		while(negIt.hasNext()) {
+			int val = negIt.next();
+			int base = val * -1;
+			base = base / 100 * 100;
+			Phrase p = null;
+			for(int i = 0; i < phrases.length; i++) {
+				if(phrases[i].getId() == base) {
+					p = phrases[i];
+					break;
+				}
+			}
+			ArrayList<Note> notes = p.getNotes();
+			int len = 0;
+			for(int k = 0; k < notes.size(); k++) {
+				if(notes.get(k).getPitch() != -1)
+					len++;
+			}
+			ArrayList<Byte> pitches = getPitches(null, len);
+			len = 0;
+			for(int k = 0; k < notes.size(); k++) {
+				Note n = notes.get(k);
+				if(n.getPitch() != -1) {
+					n.setPitch(pitches.get(len));
+					
+					len++;
+				}
+				long dur = n.getDuration();
+				n.setStart(pos);
+				n.setStop(pos + dur);
+				pos += dur + 1;
+			}
+			negPhrases[idx++] = new Phrase(notes, val, p.getChords());
+		}
+		
 		Phrase[] dPhrases = new Phrase[idsDeriv.size()];
 		itDeriv = idsDeriv.iterator();
 		idx = 0;
@@ -525,6 +589,9 @@ public class SimpleCompositions {
 		}
 		for(int i = 0; i < phrases.length; i++) {
 			phraseSet.put(phrases[i].getId(), phrases[i]);
+		}
+		for(int i = 0; i < negPhrases.length; i++) {
+			phraseSet.put(negPhrases[i].getId(), negPhrases[i]);
 		}
 		
 		ArrayList<Phrase> actual = this.phrases;
@@ -548,12 +615,11 @@ public class SimpleCompositions {
 				continue;
 			song.add(toAdd);
 		}
-		
 		long ipos = 0;
 		for(int i = 0; i < song.size(); i++) {
 			pos = ipos;
 			Phrase p = song.get(i);
-			p.generateSupports(tracks.length - 1, noteAverage, sharps, isMajor);
+			p.generateSupports(tracks.length - 1, noteAverage, sharps, isMajor, max, min);
 			ArrayList<Note> mel = p.getNotes();
 			for(int j = 0; j < mel.size(); j++) {
 				Note n = mel.get(j).clone();
@@ -633,10 +699,9 @@ public class SimpleCompositions {
 		for(int size = phrases.size() - 1; size > 1; size--) {
 			for(int i = 0; i < phrases.size() - size; i++) {
 				boolean good = true;
-				double avgDur = phrases.get(i).getAverageDuration();
 				for(int j = i; j < i + size; j++) {
 					Phrase p = phrases.get(j);
-					if(p instanceof PhraseTree || p.getAverageDuration() > 1.25 * avgDur || p.getAverageDuration() < 0.75 * avgDur) {
+					if(p instanceof PhraseTree) {
 						good = false;
 						break;
 					}
